@@ -58,25 +58,61 @@ app.get('/health', (_req, res) => {
   });
 });
 
+// ========== AUTH MIDDLEWARE ==========
+
+const adminAuthEnabled = db.isEnabled();
+
+async function requireAdmin(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+) {
+  if (!adminAuthEnabled) return next();
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Token manquant' });
+  }
+
+  const token = authHeader.slice(7);
+  const user = await db.verifyToken(token);
+  if (!user) {
+    return res.status(401).json({ error: 'Token invalide' });
+  }
+
+  next();
+}
+
+// Auth info endpoint (tells the client if auth is required)
+app.get('/api/auth/config', (_req, res) => {
+  res.json({
+    required: adminAuthEnabled,
+    supabaseUrl: adminAuthEnabled ? process.env.SUPABASE_URL : null,
+    supabaseAnonKey: adminAuthEnabled ? process.env.SUPABASE_ANON_KEY : null,
+  });
+});
+
 // ========== API ROUTES ==========
 
+// Public: read quizzes (needed for training mode too)
 app.get('/api/quizzes', async (_req, res) => {
   const quizzes = await db.listQuizzes();
   res.json(quizzes);
 });
 
 app.get('/api/quizzes/:id', async (req, res) => {
-  const quiz = await db.loadQuiz(req.params.id);
+  const quiz = await db.loadQuiz(String(req.params.id));
   if (!quiz) return res.status(404).json({ error: 'Quiz non trouve' });
   res.json(quiz);
 });
 
-app.delete('/api/quizzes/:id', async (req, res) => {
-  await db.deleteQuiz(req.params.id);
+// Protected: modify quizzes and view history
+app.delete('/api/quizzes/:id', requireAdmin, async (req, res) => {
+  await db.deleteQuiz(String(req.params.id));
   res.json({ ok: true });
 });
 
-app.get('/api/history', async (_req, res) => {
+app.get('/api/history', requireAdmin, async (_req, res) => {
   const history = await db.getGameHistory();
   res.json(history);
 });
@@ -90,6 +126,7 @@ interface RateBucket {
 
 interface RateLimitedSocket extends Socket {
   _rateLimits?: Record<string, RateBucket>;
+  _adminAuth?: boolean;
 }
 
 type RateLimiterFn = (socket: RateLimitedSocket, eventName: string, cb: () => void) => void;
@@ -131,9 +168,38 @@ function rateLimit(socket: RateLimitedSocket, eventName: string, cb: () => void)
   limiter(socket, eventName, cb);
 }
 
+// ========== SOCKET AUTH ==========
+
+function requireSocketAdmin(socket: RateLimitedSocket, cb: () => void): void {
+  if (!adminAuthEnabled || socket._adminAuth) {
+    cb();
+    return;
+  }
+  socket.emit('admin:error', { message: 'Authentification requise' });
+}
+
 // Socket.IO
 io.on('connection', (socket: RateLimitedSocket) => {
   console.log(`Connected: ${socket.id}`);
+
+  // Admin authentication via token
+  socket.on('admin:auth', async ({ token }: { token: string }) => {
+    if (!adminAuthEnabled) {
+      socket._adminAuth = true;
+      socket.emit('admin:auth-ok');
+      return;
+    }
+
+    const user = await db.verifyToken(token);
+    if (!user) {
+      socket.emit('admin:auth-error', { message: 'Token invalide' });
+      return;
+    }
+
+    socket._adminAuth = true;
+    socket.emit('admin:auth-ok');
+    console.log(`Admin authenticated: ${user.email} (${socket.id})`);
+  });
 
   // ========== ADMIN EVENTS ==========
 
@@ -155,7 +221,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
       }>;
       shuffleQuestions?: boolean;
       shuffleChoices?: boolean;
-    }) => {
+    }) => requireSocketAdmin(socket, () => {
       if (!title || !questions || !questions.length) {
         socket.emit('admin:error', { message: 'Donnees invalides' });
         return;
@@ -204,10 +270,10 @@ io.on('connection', (socket: RateLimitedSocket) => {
         return;
       }
       socket.emit('admin:quiz-created', { quizId: result });
-    },
+    }),
   );
 
-  socket.on('admin:create-room', ({ quizId }: { quizId: string }) => {
+  socket.on('admin:create-room', ({ quizId }: { quizId: string }) => requireSocketAdmin(socket, () => {
     const room = store.createRoom(quizId, socket.id);
     if (!room) {
       socket.emit('admin:error', { message: 'Quiz introuvable' });
@@ -216,9 +282,9 @@ io.on('connection', (socket: RateLimitedSocket) => {
     socket.join(`room:${room.pin}`);
     socket.emit('admin:room-created', { pin: room.pin, adminToken: room.adminToken });
     console.log(`Room created: ${room.pin} by ${socket.id}`);
-  });
+  }));
 
-  socket.on('admin:reconnect', ({ pin, adminToken }: { pin: string; adminToken: string }) => {
+  socket.on('admin:reconnect', ({ pin, adminToken }: { pin: string; adminToken: string }) => requireSocketAdmin(socket, () => {
     const room = store.reconnectAdmin(pin, adminToken, socket.id);
     if (!room) {
       socket.emit('admin:error', { message: 'Reconnexion impossible' });
@@ -233,43 +299,43 @@ io.on('connection', (socket: RateLimitedSocket) => {
       quiz: store.getQuiz(room.quizId),
     });
     console.log(`Admin reconnected to room ${pin}`);
-  });
+  }));
 
-  socket.on('admin:start-game', ({ pin }: { pin: string }) => {
+  socket.on('admin:start-game', ({ pin }: { pin: string }) => requireSocketAdmin(socket, () => {
     const room = store.getRoom(pin);
     if (!room || room.adminSocketId !== socket.id) return;
     if (store.getPlayerCount(pin) === 0) return;
 
     game.startGame(pin, io);
     console.log(`Game started: ${pin}`);
-  });
+  }));
 
-  socket.on('admin:show-leaderboard', ({ pin }: { pin: string }) => {
+  socket.on('admin:show-leaderboard', ({ pin }: { pin: string }) => requireSocketAdmin(socket, () => {
     const room = store.getRoom(pin);
     if (!room || room.adminSocketId !== socket.id) return;
     game.showLeaderboard(pin, io);
-  });
+  }));
 
-  socket.on('admin:next-question', ({ pin }: { pin: string }) => {
+  socket.on('admin:next-question', ({ pin }: { pin: string }) => requireSocketAdmin(socket, () => {
     const room = store.getRoom(pin);
     if (!room || room.adminSocketId !== socket.id) return;
     game.nextQuestion(pin, io);
-  });
+  }));
 
-  socket.on('admin:toggle-pause', ({ pin }: { pin: string }) => {
+  socket.on('admin:toggle-pause', ({ pin }: { pin: string }) => requireSocketAdmin(socket, () => {
     const room = store.getRoom(pin);
     if (!room || room.adminSocketId !== socket.id) return;
     game.togglePause(pin, io);
-  });
+  }));
 
-  socket.on('admin:kick', ({ pin, nickname }: { pin: string; nickname: string }) => {
+  socket.on('admin:kick', ({ pin, nickname }: { pin: string; nickname: string }) => requireSocketAdmin(socket, () => {
     const result = store.kickPlayer(pin, socket.id, nickname);
     if (result) {
       io.to(result.socketId).emit('player:kicked');
       io.to(`room:${pin}`).emit('room:player-joined', { players: result.players });
       console.log(`Kicked ${nickname} from room ${pin}`);
     }
-  });
+  }));
 
   // ========== PLAYER EVENTS ==========
 

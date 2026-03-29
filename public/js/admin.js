@@ -157,7 +157,7 @@ window.loadCloudQuiz = async function(id) {
 
 window.deleteCloudQuiz = async function(id) {
   try {
-    await fetch(`/api/quizzes/${id}`, { method: 'DELETE' });
+    await AdminAuth.authFetch(`/api/quizzes/${id}`, { method: 'DELETE' });
     loadCloudQuizzes();
   } catch (e) {
     console.error('Failed to delete cloud quiz:', e);

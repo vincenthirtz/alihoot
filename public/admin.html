@@ -18,8 +18,26 @@
     <button class="toggle-btn" id="toggle-theme" title="Theme sombre/clair">🌙</button>
   </div>
 
+  <!-- LOGIN SCREEN -->
+  <section id="login-screen" class="screen" style="display:none;">
+    <div class="card" style="text-align:center;">
+      <div class="logo" style="color: var(--purple);">Alihoot!</div>
+      <p style="color: var(--card-label); font-weight:600; margin-bottom:20px;">Connexion Admin</p>
+      <div class="input-group">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" class="input-field" placeholder="admin@example.com" autocomplete="email">
+      </div>
+      <div class="input-group">
+        <label for="login-password">Mot de passe</label>
+        <input type="password" id="login-password" class="input-field" placeholder="Mot de passe" autocomplete="current-password">
+      </div>
+      <button id="login-btn" class="btn btn-primary" style="width:100%;">Se connecter</button>
+      <div id="login-error" class="error-msg" style="text-align:center;"></div>
+    </div>
+  </section>
+
   <!-- CREATE QUIZ SCREEN -->
-  <section id="create-screen" class="screen active">
+  <section id="create-screen" class="screen">
     <div class="card">
       <div class="logo" style="color: var(--purple);">Alihoot!</div>
       <p style="text-align:center; color: var(--card-label); font-weight:600; margin-bottom:20px;">Cree ton quiz</p>
@@ -159,10 +177,12 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="/js/confetti.js"></script>
   <script src="/js/audio.js"></script>
+  <script src="/js/auth.js"></script>
   <script src="/js/admin.js"></script>
 </body>
 </html>

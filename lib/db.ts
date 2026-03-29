@@ -157,6 +157,24 @@ export async function getGameHistory(limit = 50) {
   }
 }
 
+// ========== AUTH ==========
+
+export async function verifyToken(token: string): Promise<{ id: string; email: string } | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  try {
+    const {
+      data: { user },
+      error,
+    } = await client.auth.getUser(token);
+    if (error || !user) return null;
+    return { id: user.id, email: user.email || '' };
+  } catch {
+    return null;
+  }
+}
+
 // ========== INIT (create tables if needed) ==========
 
 export async function initTables() {
