@@ -839,14 +839,17 @@ socket.on('admin:room-created', ({ pin, adminToken: token }) => {
   // Generate QR code
   const qrEl = document.getElementById('qr-code');
   qrEl.innerHTML = '';
-  if (typeof QRCode !== 'undefined') {
-    QRCode.toCanvas(
-      url + '?pin=' + pin,
-      { width: 200, margin: 1, color: { dark: '#46178f', light: '#ffffff' } },
-      (err, canvas) => {
-        if (!err) qrEl.appendChild(canvas);
-      },
-    );
+  if (typeof QRious !== 'undefined') {
+    const canvas = document.createElement('canvas');
+    qrEl.appendChild(canvas);
+    new QRious({
+      element: canvas,
+      value: url + '?pin=' + pin,
+      size: 200,
+      foreground: '#46178f',
+      background: '#ffffff',
+      level: 'M',
+    });
   }
 
   showScreen('room');
