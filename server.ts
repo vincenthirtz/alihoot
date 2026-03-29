@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import cors from 'cors';
 import http from 'http';
 import { Server, Socket } from 'socket.io';
 import path from 'path';
@@ -15,11 +16,15 @@ const ALLOWED_ORIGINS = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
   : undefined; // undefined = allow all (dev mode)
 
+const corsOptions: cors.CorsOptions = {
+  origin: ALLOWED_ORIGINS || true,
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+
 const io = new Server(server, {
-  cors: {
-    origin: ALLOWED_ORIGINS || true,
-    methods: ['GET', 'POST'],
-  },
+  cors: corsOptions,
   maxHttpBufferSize: 1e6, // 1MB max payload
 });
 
@@ -27,22 +32,8 @@ const io = new Server(server, {
 const ROOT_DIR = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 
-// CORS for API routes (frontend may be on a different domain)
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (ALLOWED_ORIGINS) {
-    if (origin && ALLOWED_ORIGINS.includes(origin)) {
-      res.header('Access-Control-Allow-Origin', origin);
-    }
-  } else {
-    res.header('Access-Control-Allow-Origin', origin || '*');
-  }
-  res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
-});
+// CORS for API routes
+app.use(cors(corsOptions));
 
 // JSON body parser with size limit
 app.use(express.json({ limit: '1mb' }));
