@@ -18,6 +18,16 @@
       <button class="toggle-btn" id="toggle-theme" title="Theme sombre/clair">🌙</button>
     </div>
 
+    <!-- Loading overlay (cold start) -->
+    <div class="loading-overlay" id="loading-overlay">
+      <div class="loading-content">
+        <div class="logo" style="font-size: 2rem; margin-bottom: 20px">Alihoot!</div>
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loading-text">Connexion au serveur...</div>
+        <div class="loading-sub">Le serveur démarre, patiente quelques secondes</div>
+      </div>
+    </div>
+
     <!-- CREATE QUIZ SCREEN -->
     <section id="create-screen" class="screen">
       <div class="card">
@@ -242,6 +252,8 @@
         };
         s.onerror = function () {
           console.warn('Socket.IO unavailable — loading app without realtime');
+          var lo = document.getElementById('loading-overlay');
+          if (lo) lo.classList.add('hidden');
           window.io = function () {
             return {
               on: function () {},

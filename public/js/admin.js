@@ -1,5 +1,21 @@
 const socket = io(window.BACKEND_URL || undefined);
 
+// ========== LOADING OVERLAY ==========
+const _loadingOverlay = document.getElementById('loading-overlay');
+const _loadingText = document.getElementById('loading-text');
+let _loadingStart = Date.now();
+let _loadingInterval = setInterval(() => {
+  const elapsed = Math.floor((Date.now() - _loadingStart) / 1000);
+  if (_loadingText && elapsed > 3) {
+    _loadingText.textContent = `Connexion au serveur... (${elapsed}s)`;
+  }
+}, 1000);
+
+socket.on('connect', () => {
+  if (_loadingOverlay) _loadingOverlay.classList.add('hidden');
+  clearInterval(_loadingInterval);
+});
+
 // State
 let currentPin = null;
 let adminToken = null;

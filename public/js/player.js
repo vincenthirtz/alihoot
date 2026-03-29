@@ -95,6 +95,24 @@ document.getElementById('toggle-sound').addEventListener('click', () => {
   btn.classList.toggle('off', !soundOn);
 });
 
+// ========== LOADING OVERLAY ==========
+
+const loadingOverlay = document.getElementById('loading-overlay');
+const loadingText = document.getElementById('loading-text');
+
+function hideLoadingOverlay() {
+  if (loadingOverlay) loadingOverlay.classList.add('hidden');
+}
+
+// Update loading text with elapsed time
+let _loadingStart = Date.now();
+let _loadingInterval = setInterval(() => {
+  const elapsed = Math.floor((Date.now() - _loadingStart) / 1000);
+  if (loadingText && elapsed > 3) {
+    loadingText.textContent = `Connexion au serveur... (${elapsed}s)`;
+  }
+}, 1000);
+
 // ========== CONNECTION INDICATOR ==========
 
 const connectionIndicator = document.getElementById('connection-indicator');
@@ -103,9 +121,10 @@ const connectionText = document.getElementById('connection-text');
 function setConnectionStatus(status) {
   connectionIndicator.className = 'connection-indicator ' + status;
   if (status === 'connected') {
-    connectionText.textContent = 'Connecte';
-    // Auto-hide after 3s when connected
+    connectionText.textContent = 'Connecté';
     connectionIndicator.classList.add('auto-hide');
+    hideLoadingOverlay();
+    clearInterval(_loadingInterval);
   } else if (status === 'reconnecting') {
     connectionText.textContent = 'Reconnexion…';
     connectionIndicator.classList.remove('auto-hide');

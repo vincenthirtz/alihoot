@@ -544,10 +544,27 @@ io.on('connection', (socket: RateLimitedSocket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
-  console.log(`\n  🎮 Alihoot! est lance sur http://localhost:${PORT}`);
+  console.log(`\n  🎮 Alihoot! est lancé sur http://localhost:${PORT}`);
   console.log(`  📱 Joueurs : http://localhost:${PORT}`);
   console.log(`  👑 Admin   : http://localhost:${PORT}/admin`);
   console.log(`  📊 Historique : http://localhost:${PORT}/admin/history`);
   await db.initTables();
   console.log('');
+
+  // Keep-alive: self-ping every 14 min to prevent Render free tier from sleeping
+  if (process.env.RENDER_EXTERNAL_URL) {
+    const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/health`;
+    setInterval(
+      async () => {
+        try {
+          await fetch(keepAliveUrl);
+          console.log('[keep-alive] ping ok');
+        } catch {
+          console.log('[keep-alive] ping failed');
+        }
+      },
+      14 * 60 * 1000,
+    ); // every 14 minutes
+    console.log(`  🏓 Keep-alive activé (ping toutes les 14 min)`);
+  }
 });

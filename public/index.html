@@ -26,6 +26,16 @@
       <span class="connection-text" id="connection-text">Connecté</span>
     </div>
 
+    <!-- Loading overlay (cold start) -->
+    <div class="loading-overlay" id="loading-overlay">
+      <div class="loading-content">
+        <div class="logo" style="font-size: 2rem; margin-bottom: 20px">Alihoot!</div>
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loading-text">Connexion au serveur...</div>
+        <div class="loading-sub">Le serveur démarre, patiente quelques secondes</div>
+      </div>
+    </div>
+
     <!-- JOIN SCREEN -->
     <section id="join-screen" class="screen active" role="main" aria-label="Rejoindre une partie">
       <div class="card">
@@ -243,6 +253,8 @@
         };
         s.onerror = function () {
           console.warn('Socket.IO unavailable — loading app without realtime');
+          var lo = document.getElementById('loading-overlay');
+          if (lo) lo.classList.add('hidden');
           window.io = function () {
             return {
               on: function () {},
