@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alihoot! - Admin</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+  <!-- Sound / Theme toggles -->
+  <div class="sound-toggle">
+    <button class="toggle-btn" id="toggle-sound" title="Sons">🔊</button>
+    <button class="toggle-btn" id="toggle-music" title="Musique">🎵</button>
+  </div>
+  <div class="theme-toggle">
+    <button class="toggle-btn" id="toggle-theme" title="Theme sombre/clair">🌙</button>
+  </div>
+
+  <!-- CREATE QUIZ SCREEN -->
+  <section id="create-screen" class="screen active">
+    <div class="card">
+      <div class="logo" style="color: var(--purple);">Alihoot!</div>
+      <p style="text-align:center; color: var(--card-label); font-weight:600; margin-bottom:20px;">Cree ton quiz</p>
+
+      <!-- Cloud quizzes (Supabase) -->
+      <div class="saved-quizzes" id="cloud-quizzes-section" style="display:none;">
+        <label style="font-weight:700; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; color:var(--card-label);">Quiz en ligne</label>
+        <div class="saved-quiz-list" id="cloud-quiz-list"></div>
+      </div>
+
+      <!-- Saved quizzes (localStorage) -->
+      <div class="saved-quizzes" id="saved-quizzes-section" style="display:none;">
+        <label style="font-weight:700; font-size:0.85rem; text-transform:uppercase; letter-spacing:1px; color:var(--card-label);">Quiz locaux</label>
+        <div class="saved-quiz-list" id="saved-quiz-list"></div>
+      </div>
+
+      <div class="input-group quiz-title-input">
+        <label>Titre du quiz</label>
+        <input type="text" id="quiz-title" class="input-field" placeholder="Mon super quiz..." maxlength="80">
+      </div>
+
+      <div id="questions-list" class="questions-list"></div>
+
+      <button id="add-question-btn" class="add-question-btn">+ Ajouter une question</button>
+
+      <div class="import-export-bar">
+        <button id="export-quiz-btn" class="ie-btn" title="Exporter en JSON">📥 Exporter</button>
+        <label class="ie-btn" title="Importer depuis JSON">📤 Importer
+          <input type="file" id="import-quiz-input" accept=".json" style="display:none;">
+        </label>
+      </div>
+
+      <div class="shuffle-options">
+        <label class="shuffle-toggle"><input type="checkbox" id="shuffle-questions"> Melanger l'ordre des questions</label>
+        <label class="shuffle-toggle"><input type="checkbox" id="shuffle-choices"> Melanger l'ordre des choix</label>
+      </div>
+
+      <button id="preview-btn" class="preview-btn" onclick="openPreview()">👁️ Apercu joueur</button>
+      <button id="create-quiz-btn" class="create-quiz-btn">Creer le quiz &amp; lancer la room</button>
+      <div id="create-error" class="error-msg" style="text-align:center;"></div>
+    </div>
+  </section>
+
+  <!-- ROOM / LOBBY SCREEN -->
+  <section id="room-screen" class="screen">
+    <div class="logo-small">Alihoot!</div>
+    <div class="waiting-text">Rejoignez la partie sur</div>
+    <div class="join-url" id="join-url"></div>
+    <div class="qr-container" id="qr-code"></div>
+    <div style="font-size:1.2rem; font-weight:700; margin: 10px 0; opacity:0.8;">Code PIN :</div>
+    <div class="pin-display" id="room-pin"></div>
+    <div class="player-count" id="player-count">0 joueur(s)</div>
+    <div class="player-list" id="room-players"></div>
+    <button id="start-game-btn" class="btn btn-start" disabled>Lancer la partie</button>
+  </section>
+
+  <!-- COUNTDOWN OVERLAY -->
+  <div class="countdown-overlay" id="countdown-overlay" style="display:none;">
+    <div class="countdown-number" id="countdown-number">3</div>
+  </div>
+
+  <!-- QUESTION DISPLAY (Admin view) -->
+  <section id="question-display" class="screen">
+    <div class="question-counter" id="admin-q-counter"></div>
+    <div class="progress-bar-container" id="admin-progress-bar"></div>
+    <div class="timer-text" id="admin-timer">20</div>
+    <div class="timer-bar-container">
+      <div class="timer-bar" id="admin-timer-bar"></div>
+    </div>
+    <img class="question-image" id="admin-q-image" style="display:none;" alt="">
+    <div class="question-text" id="admin-q-text"></div>
+    <div class="answer-grid" id="admin-answer-grid"></div>
+    <div class="answer-count" id="admin-answer-count">0 / 0 reponses</div>
+    <button class="btn btn-small btn-pause" id="pause-btn" onclick="togglePause()">⏸️ Pause</button>
+  </section>
+
+  <!-- ANSWER STATS SCREEN -->
+  <section id="stats-screen" class="screen">
+    <div class="question-text" id="stats-question"></div>
+    <div class="stats-container" id="stats-bars"></div>
+    <div class="freetext-stats" id="freetext-stats" style="display:none;"></div>
+    <div class="answer-count" id="stats-total"></div>
+    <div class="explanation-display" id="stats-explanation" style="display:none;"></div>
+    <button id="show-leaderboard-btn" class="btn btn-next">Voir le classement</button>
+  </section>
+
+  <!-- ADMIN LEADERBOARD -->
+  <section id="admin-leaderboard" class="screen">
+    <div class="leaderboard-title">Classement</div>
+    <div class="leaderboard" id="admin-rankings"></div>
+    <div class="reactions-bar" id="admin-reactions" style="margin-top:15px;"></div>
+    <button id="next-question-btn" class="btn btn-next" style="margin-top: 25px;">Question suivante</button>
+  </section>
+
+  <!-- FINAL SCREEN -->
+  <section id="final-screen" class="screen">
+    <canvas id="confetti-canvas"></canvas>
+    <div class="final-title">Fin du quiz !</div>
+    <div class="podium-container" id="admin-podium"></div>
+    <div class="leaderboard" id="admin-final-rankings" style="margin-top: 20px;"></div>
+
+    <!-- Dashboard post-partie -->
+    <div class="dashboard-section" id="dashboard-section" style="display:none;">
+      <div class="dashboard-title">Statistiques detaillees</div>
+      <div class="dashboard-grid" id="dashboard-grid"></div>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:20px;">
+      <button id="share-btn" class="btn share-btn btn-small">📸 Partager les resultats</button>
+      <button id="toggle-dashboard-btn" class="btn btn-next btn-small">📊 Voir les stats</button>
+      <a href="/admin/history" class="btn btn-next btn-small">📜 Historique</a>
+      <button id="back-home-btn" class="btn btn-primary btn-small">Nouveau quiz</button>
+    </div>
+  </section>
+
+  <!-- PREVIEW OVERLAY -->
+  <div class="preview-overlay" id="preview-overlay" style="display:none;">
+    <div class="preview-phone">
+      <div class="preview-header">
+        <span>Apercu joueur</span>
+        <button class="preview-nav-btn" onclick="previewPrev()">◀</button>
+        <span id="preview-counter">1/1</span>
+        <button class="preview-nav-btn" onclick="previewNext()">▶</button>
+        <button class="preview-close" onclick="closePreview()">&times;</button>
+      </div>
+      <div class="preview-body" id="preview-body"></div>
+    </div>
+  </div>
+
+  <!-- PAUSE OVERLAY -->
+  <div class="pause-overlay" id="pause-overlay" style="display:none;">
+    <div class="pause-content">
+      <div style="font-size:4rem;">⏸️</div>
+      <div style="font-size:1.5rem; font-weight:800; margin:15px 0;">PARTIE EN PAUSE</div>
+      <button class="btn btn-start" id="resume-btn">▶️ Reprendre</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="/js/confetti.js"></script>
+  <script src="/js/audio.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

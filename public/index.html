@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alihoot!</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/player.css">
+</head>
+<body>
+
+  <!-- Sound toggle -->
+  <div class="sound-toggle">
+    <button class="toggle-btn" id="toggle-sound" title="Sons">🔊</button>
+  </div>
+
+  <!-- JOIN SCREEN -->
+  <section id="join-screen" class="screen active">
+    <div class="card">
+      <div class="logo">Alihoot!</div>
+      <div class="input-group">
+        <label>Code PIN</label>
+        <input type="text" id="pin-input" class="input-field pin-input" maxlength="6" placeholder="000000" inputmode="numeric">
+      </div>
+      <div class="input-group">
+        <label>Ton pseudo</label>
+        <input type="text" id="nickname-input" class="input-field" maxlength="20" placeholder="Pseudo...">
+      </div>
+      <div class="avatar-picker">
+        <label>Ton avatar</label>
+        <div class="avatar-preview" id="avatar-preview">🐱</div>
+        <div class="avatar-emoji-grid" id="avatar-emoji-grid"></div>
+        <div class="avatar-color-grid" id="avatar-color-grid"></div>
+      </div>
+      <button id="join-btn" class="btn btn-primary">Rejoindre</button>
+      <div id="join-error" class="error-msg"></div>
+    </div>
+  </section>
+
+  <!-- LOBBY SCREEN -->
+  <section id="lobby-screen" class="screen">
+    <div class="logo-small">Alihoot!</div>
+    <div class="waiting-text">Tu es dans la partie !</div>
+    <div id="lobby-nickname" class="nickname-display">
+      <span id="lobby-avatar" class="nickname-avatar"></span>
+      <span id="lobby-name"></span>
+    </div>
+    <div class="spectator-badge" id="spectator-badge" style="display:none;">👁️ Mode spectateur</div>
+    <div class="waiting-text">En attente du lancement<span class="waiting-dots"></span></div>
+    <div class="player-list" id="lobby-players"></div>
+  </section>
+
+  <!-- COUNTDOWN OVERLAY -->
+  <div class="countdown-overlay" id="countdown-overlay" style="display:none;">
+    <div class="countdown-number" id="countdown-number">3</div>
+  </div>
+
+  <!-- QUESTION SCREEN -->
+  <section id="question-screen" class="screen">
+    <div class="question-counter" id="q-counter"></div>
+    <div class="progress-bar-container" id="q-progress-bar"></div>
+    <div class="timer-text" id="timer-display">20</div>
+    <div class="timer-bar-container">
+      <div class="timer-bar" id="timer-bar"></div>
+    </div>
+    <img class="question-image" id="q-image" style="display:none;" alt="">
+    <div class="question-text" id="q-text"></div>
+
+    <!-- MCQ / TrueFalse answers -->
+    <div class="answer-grid" id="answer-grid"></div>
+
+    <!-- Multi-select hint + submit -->
+    <div class="multi-hint" id="multi-hint" style="display:none;">Coche plusieurs reponses</div>
+    <button class="btn btn-start multi-submit-btn" id="multi-submit" style="display:none;">Valider</button>
+
+    <!-- Ordering (drag & drop) -->
+    <div class="ordering-container" id="ordering-container" style="display:none;"></div>
+    <button class="btn btn-start ordering-submit-btn" id="ordering-submit" style="display:none;">Valider l'ordre</button>
+
+    <!-- Freetext input -->
+    <input type="text" class="freetext-input" id="freetext-input" placeholder="Ta reponse..." style="display:none;">
+    <button class="freetext-submit-btn" id="freetext-submit" style="display:none;">Envoyer</button>
+  </section>
+
+  <!-- WAITING SCREEN (after answering) -->
+  <section id="waiting-screen" class="screen">
+    <div class="spinner"></div>
+    <div class="waiting-text">Reponse envoyee !</div>
+    <div class="waiting-text" style="margin-top:10px; opacity:0.7">En attente des autres joueurs<span class="waiting-dots"></span></div>
+  </section>
+
+  <!-- RESULT SCREEN -->
+  <section id="result-screen" class="screen">
+    <div class="success-icon" id="result-icon"></div>
+    <div class="result-text" id="result-text"></div>
+    <div class="result-points" id="result-points"></div>
+    <div class="result-rank" id="result-rank" style="display:none;"></div>
+    <div class="explanation-display" id="result-explanation" style="display:none;"></div>
+  </section>
+
+  <!-- LEADERBOARD SCREEN -->
+  <section id="leaderboard-screen" class="screen">
+    <div class="leaderboard-title">Classement</div>
+    <div class="leaderboard" id="player-leaderboard"></div>
+    <div class="reactions-bar" id="player-reactions">
+      <button class="reaction-btn" data-emoji="👏">👏</button>
+      <button class="reaction-btn" data-emoji="🔥">🔥</button>
+      <button class="reaction-btn" data-emoji="😂">😂</button>
+      <button class="reaction-btn" data-emoji="😱">😱</button>
+      <button class="reaction-btn" data-emoji="💪">💪</button>
+    </div>
+  </section>
+
+  <!-- PODIUM SCREEN -->
+  <section id="podium-screen" class="screen">
+    <canvas id="confetti-canvas"></canvas>
+    <div class="final-title">Resultats finaux !</div>
+    <div class="podium-container" id="podium"></div>
+    <div class="leaderboard" id="final-leaderboard" style="margin-top: 20px;"></div>
+    <div class="your-position" id="your-position"></div>
+  </section>
+
+  <!-- PAUSE OVERLAY -->
+  <div class="kicked-overlay" id="player-pause-overlay" style="display:none;">
+    <div style="font-size:4rem;">⏸️</div>
+    <div class="kicked-text">Partie en pause</div>
+  </div>
+
+  <!-- KICKED OVERLAY -->
+  <div class="kicked-overlay" id="kicked-overlay" style="display:none;">
+    <div class="kicked-icon">🚫</div>
+    <div class="kicked-text">Tu as ete expulse</div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/confetti.js"></script>
+  <script src="/js/audio.js"></script>
+  <script src="/js/player.js"></script>
+</body>
+</html>
