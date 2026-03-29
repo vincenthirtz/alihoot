@@ -1,3 +1,18 @@
 [build]
   publish = "public"
   command = "echo 'Static build ready'"
+
+[[redirects]]
+  from = "/admin/login"
+  to = "/login.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/history"
+  to = "/history.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
