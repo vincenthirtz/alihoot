@@ -107,6 +107,9 @@ const AdminAuth = (() => {
   return { init, logout, getToken, isRequired, authFetch };
 })();
 
-document.addEventListener('DOMContentLoaded', () => {
+// Init immediately — this script is loaded dynamically after DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => AdminAuth.init());
+} else {
   AdminAuth.init();
-});
+}
