@@ -130,6 +130,43 @@ function timeUp(pin: string, io: Server): void {
   const stats = store.getAnswerStats(pin, room.currentQuestionIndex);
   stats.explanation = explanation;
   io.to(room.adminSocketId).emit('game:answer-stats', stats);
+
+  // Training mode: auto-advance
+  if (room.training) {
+    scheduleTrainingAdvance(pin, io);
+  }
+}
+
+function scheduleTrainingAdvance(pin: string, io: Server): void {
+  const room = store.getRoom(pin);
+  if (!room || !room.training) return;
+
+  // Clear any existing training timers
+  clearTrainingTimers(room);
+  room._trainingTimers = [];
+
+  room._trainingTimers.push(
+    setTimeout(() => {
+      const r = store.getRoom(pin);
+      if (!r || r.state === 'finished') return;
+      showLeaderboard(pin, io);
+    }, 2000),
+  );
+
+  room._trainingTimers.push(
+    setTimeout(() => {
+      const r = store.getRoom(pin);
+      if (!r || r.state === 'finished') return;
+      nextQuestion(pin, io);
+    }, 5000),
+  );
+}
+
+function clearTrainingTimers(room: { _trainingTimers?: ReturnType<typeof setTimeout>[] }): void {
+  if (room._trainingTimers) {
+    room._trainingTimers.forEach((t) => clearTimeout(t));
+    room._trainingTimers = [];
+  }
 }
 
 export function handleAnswer(
@@ -206,6 +243,12 @@ function endGame(pin: string, io: Server): void {
   io.to(`room:${pin}`).emit('audio:play', { sound: 'victory' });
 
   store.saveGameHistory(pin);
+
+  // Training mode: auto-cleanup after 60s
+  if (room.training) {
+    clearTrainingTimers(room);
+    setTimeout(() => store.deleteRoom(pin), 60000);
+  }
 }
 
 // ========== PAUSE ==========

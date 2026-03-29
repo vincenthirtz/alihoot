@@ -351,6 +351,47 @@ io.on('connection', (socket: RateLimitedSocket) => {
     }),
   );
 
+  // ========== TRAINING MODE ==========
+
+  socket.on(
+    'training:start',
+    async ({
+      quizId,
+      nickname,
+      avatar,
+    }: {
+      quizId: string;
+      nickname: string;
+      avatar: { icon: string; color: string };
+    }) => {
+      const quiz = await store.ensureQuizLoaded(quizId);
+      if (!quiz) {
+        socket.emit('player:error', { message: 'Quiz introuvable' });
+        return;
+      }
+
+      const room = store.createTrainingRoom(quizId, socket.id, nickname, avatar);
+      if (!room) {
+        socket.emit('player:error', { message: 'Impossible de creer la session' });
+        return;
+      }
+
+      socket.join(`room:${room.pin}`);
+      socket.emit('training:ready', {
+        pin: room.pin,
+        nickname,
+        avatar,
+        quiz: { title: quiz.title, questionCount: quiz.questions.length },
+      });
+
+      // Auto-start after brief delay
+      setTimeout(() => {
+        game.startGame(room.pin, io);
+        console.log(`Training started: ${room.pin} by ${nickname}`);
+      }, 1000);
+    },
+  );
+
   // ========== DISCONNECT ==========
 
   socket.on('disconnect', () => {

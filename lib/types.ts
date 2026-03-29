@@ -104,6 +104,8 @@ export interface Room {
   gameStartedAt: string | null;
   paused?: boolean;
   _pausedRemaining?: number;
+  training?: boolean;
+  _trainingTimers?: ReturnType<typeof setTimeout>[];
 }
 
 export interface LeaderboardEntry {

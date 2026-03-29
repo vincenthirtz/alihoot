@@ -34,6 +34,20 @@
       </div>
       <button id="join-btn" class="btn btn-primary">Rejoindre</button>
       <div id="join-error" class="error-msg"></div>
+      <div style="margin-top: 20px; text-align: center;">
+        <button id="training-btn" class="btn" style="background: var(--purple, #9b59b6); color: white;">S'entrainer seul</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRAINING QUIZ PICKER -->
+  <section id="training-screen" class="screen">
+    <div class="card">
+      <div class="logo-small">Mode Entrainement</div>
+      <p style="text-align:center; color:var(--card-label); margin-bottom:15px;">Choisis un quiz pour t'entrainer</p>
+      <div id="training-quiz-list" style="max-height:300px; overflow-y:auto;"></div>
+      <div id="training-error" class="error-msg"></div>
+      <button id="training-back" class="btn" style="margin-top:15px;">Retour</button>
     </div>
   </section>
 
@@ -86,7 +100,7 @@
   <section id="waiting-screen" class="screen">
     <div class="spinner"></div>
     <div class="waiting-text">Reponse envoyee !</div>
-    <div class="waiting-text" style="margin-top:10px; opacity:0.7">En attente des autres joueurs<span class="waiting-dots"></span></div>
+    <div class="waiting-text" id="waiting-subtext" style="margin-top:10px; opacity:0.7">En attente des autres joueurs<span class="waiting-dots"></span></div>
   </section>
 
   <!-- RESULT SCREEN -->

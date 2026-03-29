@@ -125,6 +125,64 @@ export function createRoom(quizId: string, adminSocketId: string): Room | null {
   return rooms[pin];
 }
 
+export async function ensureQuizLoaded(quizId: string): Promise<Quiz | null> {
+  if (quizzes[quizId]) return quizzes[quizId];
+
+  const data = await db.loadQuiz(quizId);
+  if (!data) return null;
+
+  quizzes[quizId] = {
+    id: data.id,
+    title: data.title,
+    shuffleQuestions: data.shuffle_questions || false,
+    shuffleChoices: data.shuffle_choices || false,
+    questions: data.questions,
+  };
+  return quizzes[quizId];
+}
+
+export function createTrainingRoom(
+  quizId: string,
+  socketId: string,
+  nickname: string,
+  avatar: Avatar,
+): Room | null {
+  const quiz = quizzes[quizId];
+  if (!quiz) return null;
+
+  const pin = generatePin(new Set(Object.keys(rooms)));
+
+  rooms[pin] = {
+    pin,
+    quizId,
+    state: 'lobby',
+    currentQuestionIndex: -1,
+    players: {},
+    adminSocketId: socketId,
+    adminToken: generateToken(),
+    questionStartedAt: null,
+    timer: null,
+    answeredCount: 0,
+    reactions: {},
+    fingerprints: new Set(),
+    spectators: {},
+    gameStartedAt: null,
+    training: true,
+  };
+
+  rooms[pin].players[socketId] = {
+    nickname: sanitize(nickname),
+    score: 0,
+    answers: [],
+    connected: true,
+    streak: 0,
+    avatar,
+    fingerprint: null,
+  };
+
+  return rooms[pin];
+}
+
 export function getRoom(pin: string): Room | null {
   return rooms[pin] || null;
 }
@@ -159,6 +217,7 @@ export function addPlayer(
 ): AddPlayerResult {
   const room = rooms[pin];
   if (!room) return { error: 'Room introuvable' };
+  if (room.training) return { error: 'Session d\'entrainement privee' };
 
   if (room.state !== 'lobby') {
     if (fingerprint) {

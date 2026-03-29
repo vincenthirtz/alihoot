@@ -218,6 +218,14 @@ const questionTypes = {
   ordering: { label: 'Classement', icon: '📊' }
 };
 
+const defaultTimeLimits = {
+  mcq: 20,
+  truefalse: 10,
+  multi: 30,
+  freetext: 30,
+  ordering: 45
+};
+
 function addQuestion(prefill = null) {
   questionCount++;
   const n = questionCount;
@@ -250,15 +258,9 @@ function addQuestion(prefill = null) {
       <div class="time-select">
         <label>Temps :</label>
         <select class="time-select-input">
-          <option value="5"${(prefill?.timeLimit||20)==5?' selected':''}>5s</option>
-          <option value="10"${(prefill?.timeLimit||20)==10?' selected':''}>10s</option>
-          <option value="15"${(prefill?.timeLimit||20)==15?' selected':''}>15s</option>
-          <option value="20"${(prefill?.timeLimit||20)==20?' selected':''}>20s</option>
-          <option value="30"${(prefill?.timeLimit||20)==30?' selected':''}>30s</option>
-          <option value="45"${(prefill?.timeLimit||20)==45?' selected':''}>45s</option>
-          <option value="60"${(prefill?.timeLimit||20)==60?' selected':''}>60s</option>
-          <option value="90"${(prefill?.timeLimit||20)==90?' selected':''}>90s</option>
-          <option value="120"${(prefill?.timeLimit||20)==120?' selected':''}>120s</option>
+          ${[5,10,15,20,30,45,60,90,120].map(t =>
+            `<option value="${t}"${(prefill?.timeLimit || defaultTimeLimits[type] || 20)==t?' selected':''}>${t}s</option>`
+          ).join('\n          ')}
         </select>
       </div>
       <div class="points-select">
@@ -351,9 +353,18 @@ function renderQuestionBody(block, type, prefill = null) {
 
 window.changeQuestionType = function(btn, type) {
   const block = btn.closest('.question-block');
+  const prevType = block.dataset.type;
+  const timeSelect = block.querySelector('.time-select-input');
+  const currentTime = parseInt(timeSelect.value);
+
   block.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderQuestionBody(block, type);
+
+  // Auto-adjust timer if it was still at the previous type's default
+  if (currentTime === (defaultTimeLimits[prevType] || 20)) {
+    timeSelect.value = defaultTimeLimits[type] || 20;
+  }
 };
 
 window.addChoice = function(btn) {

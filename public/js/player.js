@@ -20,9 +20,12 @@ const fingerprint = (() => {
   return fp;
 })();
 
+let isTraining = false;
+
 // DOM
 const screens = {
   join: document.getElementById('join-screen'),
+  training: document.getElementById('training-screen'),
   lobby: document.getElementById('lobby-screen'),
   question: document.getElementById('question-screen'),
   waiting: document.getElementById('waiting-screen'),
@@ -34,6 +37,10 @@ const screens = {
 function showScreen(name) {
   Object.values(screens).forEach(s => s.classList.remove('active'));
   screens[name].classList.add('active');
+
+  if (name === 'waiting' && isTraining) {
+    document.getElementById('waiting-subtext').textContent = 'Resultats dans quelques secondes...';
+  }
 }
 
 // Sound toggle
@@ -673,7 +680,11 @@ function renderFinalLeaderboard(rankings) {
 
   const me = rankings.find(r => r.nickname === currentNickname);
   if (me) {
-    document.getElementById('your-position').textContent = `Tu es ${me.rank}${me.rank === 1 ? 'er' : 'e'} sur ${rankings.length} joueurs !`;
+    if (isTraining) {
+      document.getElementById('your-position').textContent = `Entrainement termine ! Score : ${me.score} pts`;
+    } else {
+      document.getElementById('your-position').textContent = `Tu es ${me.rank}${me.rank === 1 ? 'er' : 'e'} sur ${rankings.length} joueurs !`;
+    }
   }
 }
 
@@ -690,5 +701,115 @@ socket.on('game:resumed', () => {
 // ========== DISCONNECT ==========
 
 socket.on('game:host-disconnected', () => {
+  if (isTraining) return; // Training mode: we are the host
   document.getElementById('q-text') && (document.getElementById('q-text').textContent = "L'hote s'est deconnecte...");
+});
+
+// ========== TRAINING MODE ==========
+
+document.getElementById('training-btn').addEventListener('click', async () => {
+  showScreen('training');
+  const list = document.getElementById('training-quiz-list');
+  const error = document.getElementById('training-error');
+  list.innerHTML = '<p style="text-align:center;">Chargement...</p>';
+  error.textContent = '';
+
+  try {
+    const res = await fetch('/api/quizzes');
+    const quizzes = await res.json();
+
+    // Also include local quizzes
+    let localQuizzes = [];
+    try { localQuizzes = JSON.parse(localStorage.getItem('alihoot-saved-quizzes') || '[]'); }
+    catch {}
+
+    if (quizzes.length === 0 && localQuizzes.length === 0) {
+      list.innerHTML = '<p style="text-align:center; color:var(--card-label);">Aucun quiz disponible. Cree-en un depuis la page Admin !</p>';
+      return;
+    }
+
+    let html = '';
+
+    if (quizzes.length > 0) {
+      html += quizzes.map(q => `
+        <button class="btn training-quiz-btn" data-quiz-id="${q.id}" style="width:100%; margin-bottom:8px; text-align:left; padding:12px;">
+          <strong>${q.title}</strong>
+          <small style="display:block; opacity:0.7;">${q.questions.length} questions</small>
+        </button>
+      `).join('');
+    }
+
+    if (localQuizzes.length > 0) {
+      html += '<p style="margin:10px 0 5px; color:var(--card-label); font-size:0.85rem;">Quiz locaux :</p>';
+      html += localQuizzes.map((q, i) => `
+        <button class="btn training-quiz-btn training-local" data-local-index="${i}" style="width:100%; margin-bottom:8px; text-align:left; padding:12px;">
+          <strong>${q.title}</strong>
+          <small style="display:block; opacity:0.7;">${q.questions.length} questions</small>
+        </button>
+      `).join('');
+    }
+
+    list.innerHTML = html;
+
+    // Cloud quiz click
+    list.querySelectorAll('[data-quiz-id]').forEach(btn => {
+      btn.addEventListener('click', () => startTraining(btn.dataset.quizId));
+    });
+
+    // Local quiz click — need to create it on server first
+    list.querySelectorAll('[data-local-index]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const quiz = localQuizzes[parseInt(btn.dataset.localIndex)];
+        if (quiz) startTrainingLocal(quiz);
+      });
+    });
+  } catch (e) {
+    list.innerHTML = '';
+    error.textContent = 'Erreur lors du chargement des quiz';
+  }
+});
+
+document.getElementById('training-back').addEventListener('click', () => {
+  showScreen('join');
+});
+
+function startTraining(quizId) {
+  const nickname = document.getElementById('nickname-input').value.trim() || 'Joueur';
+  isTraining = true;
+  socket.emit('training:start', {
+    quizId,
+    nickname,
+    avatar: { icon: chosenIcon, color: chosenColor }
+  });
+}
+
+function startTrainingLocal(quiz) {
+  const nickname = document.getElementById('nickname-input').value.trim() || 'Joueur';
+  isTraining = true;
+
+  // Create the quiz on the server first, then start training
+  socket.emit('admin:create-quiz', {
+    title: quiz.title,
+    questions: quiz.questions,
+    shuffleQuestions: quiz.shuffleQuestions || false,
+    shuffleChoices: quiz.shuffleChoices || false
+  });
+
+  socket.once('admin:quiz-created', ({ quizId }) => {
+    socket.emit('training:start', {
+      quizId,
+      nickname,
+      avatar: { icon: chosenIcon, color: chosenColor }
+    });
+  });
+}
+
+socket.on('training:ready', ({ pin, nickname, avatar, quiz }) => {
+  currentPin = pin;
+  currentNickname = nickname;
+  currentAvatar = avatar;
+
+  document.getElementById('lobby-avatar').textContent = avatar?.icon || '👤';
+  document.getElementById('lobby-name').textContent = nickname;
+  showScreen('lobby');
 });
