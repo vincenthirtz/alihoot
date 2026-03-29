@@ -530,6 +530,8 @@ body {
 }
 
 .question-image {
+  display: block;
+  width: 100%;
   max-width: 500px;
   max-height: 250px;
   border-radius: var(--radius);
