@@ -13,23 +13,27 @@
     <div class="card" style="text-align:center;">
       <div class="logo" style="color: var(--purple);">Alihoot!</div>
       <p style="color: var(--card-label); font-weight:600; margin-bottom:20px;">Connexion Admin</p>
-      <div class="input-group">
-        <label for="login-email">Email</label>
-        <input type="email" id="login-email" class="input-field" placeholder="admin@example.com" autocomplete="email">
-      </div>
-      <div class="input-group">
-        <label for="login-password">Mot de passe</label>
-        <input type="password" id="login-password" class="input-field" placeholder="Mot de passe" autocomplete="current-password">
-      </div>
-      <button id="login-btn" class="btn btn-primary" style="width:100%;">Se connecter</button>
+      <form id="login-form" onsubmit="return false;">
+        <div class="input-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" class="input-field" placeholder="admin@example.com" autocomplete="email">
+        </div>
+        <div class="input-group">
+          <label for="login-password">Mot de passe</label>
+          <input type="password" id="login-password" class="input-field" placeholder="Mot de passe" autocomplete="current-password">
+        </div>
+        <button id="login-btn" class="btn btn-primary" style="width:100%;">Se connecter</button>
+      </form>
       <div id="login-error" class="error-msg" style="text-align:center;"></div>
     </div>
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
+    var BACKEND_URL = location.hostname === 'localhost' ? '' : 'https://alihoot.onrender.com';
+
     (async () => {
-      const configRes = await fetch('/api/auth/config');
+      const configRes = await fetch(BACKEND_URL + '/api/auth/config');
       const config = await configRes.json();
 
       if (!config.required) {
