@@ -220,18 +220,42 @@
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script>
+      var BACKEND_URL =
+        location.hostname === 'localhost' ? '' : 'https://alihoot.onrender.com';
+      var socketIOSrc = BACKEND_URL
+        ? BACKEND_URL + '/socket.io/socket.io.js'
+        : '/socket.io/socket.io.js';
+    </script>
+    <script src="/js/confetti.js"></script>
+    <script src="/js/audio.js"></script>
+    <script>
+      // Load socket.io, then auth + admin once ready
       (function () {
         var s = document.createElement('script');
-        s.src =
-          location.hostname === 'localhost'
-            ? '/socket.io/socket.io.js'
-            : 'https://alihoot.onrender.com/socket.io/socket.io.js';
+        s.src = socketIOSrc;
         s.onload = function () {
-          ['confetti', 'audio', 'auth', 'admin'].forEach(function (name) {
-            var sc = document.createElement('script');
-            sc.src = '/js/' + name + '.js';
-            document.body.appendChild(sc);
-          });
+          var a = document.createElement('script');
+          a.src = '/js/auth.js';
+          document.body.appendChild(a);
+          var b = document.createElement('script');
+          b.src = '/js/admin.js';
+          document.body.appendChild(b);
+        };
+        s.onerror = function () {
+          console.warn('Socket.IO unavailable — loading app without realtime');
+          window.io = function () {
+            return {
+              on: function () {},
+              emit: function () {},
+              io: { on: function () {} },
+            };
+          };
+          var a = document.createElement('script');
+          a.src = '/js/auth.js';
+          document.body.appendChild(a);
+          var b = document.createElement('script');
+          b.src = '/js/admin.js';
+          document.body.appendChild(b);
         };
         document.body.appendChild(s);
       })();

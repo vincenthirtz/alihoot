@@ -2,8 +2,7 @@
 // Handles Supabase authentication for admin pages
 
 const AdminAuth = (() => {
-  const BACKEND_URL =
-    window.location.hostname === 'localhost' ? '' : 'https://alihoot.onrender.com';
+  const BACKEND_URL = window.BACKEND_URL || '';
   let supabaseClient = null;
   let authRequired = false;
   let currentToken = null;

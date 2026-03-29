@@ -225,20 +225,35 @@
     </div>
 
     <script>
-      // Load socket.io from backend in production, locally from server
+      var BACKEND_URL =
+        location.hostname === 'localhost' ? '' : 'https://alihoot.onrender.com';
+      var socketIOSrc = BACKEND_URL
+        ? BACKEND_URL + '/socket.io/socket.io.js'
+        : '/socket.io/socket.io.js';
+    </script>
+    <script src="/js/confetti.js"></script>
+    <script src="/js/audio.js"></script>
+    <script>
       (function () {
         var s = document.createElement('script');
-        s.src =
-          location.hostname === 'localhost'
-            ? '/socket.io/socket.io.js'
-            : 'https://alihoot.onrender.com/socket.io/socket.io.js';
+        s.src = socketIOSrc;
         s.onload = function () {
-          // Load app scripts after socket.io is ready
-          ['confetti', 'audio', 'player'].forEach(function (name) {
-            var sc = document.createElement('script');
-            sc.src = '/js/' + name + '.js';
-            document.body.appendChild(sc);
-          });
+          var p = document.createElement('script');
+          p.src = '/js/player.js';
+          document.body.appendChild(p);
+        };
+        s.onerror = function () {
+          console.warn('Socket.IO unavailable — loading app without realtime');
+          window.io = function () {
+            return {
+              on: function () {},
+              emit: function () {},
+              io: { on: function () {} },
+            };
+          };
+          var p = document.createElement('script');
+          p.src = '/js/player.js';
+          document.body.appendChild(p);
         };
         document.body.appendChild(s);
       })();

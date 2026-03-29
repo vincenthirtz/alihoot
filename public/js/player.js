@@ -1,5 +1,4 @@
-const BACKEND_URL = window.location.hostname === 'localhost' ? '' : 'https://alihoot.onrender.com';
-const socket = io(BACKEND_URL || undefined);
+const socket = io(window.BACKEND_URL || undefined);
 
 // State
 let currentPin = null;
