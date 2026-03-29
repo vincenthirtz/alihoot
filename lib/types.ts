@@ -1,4 +1,4 @@
-export type QuestionType = 'mcq' | 'truefalse' | 'multi' | 'freetext' | 'ordering';
+export type QuestionType = 'mcq' | 'truefalse' | 'multi' | 'freetext' | 'ordering' | 'slider';
 
 export interface Avatar {
   icon: string;
@@ -11,6 +11,7 @@ export interface BaseQuestion {
   timeLimit: number;
   pointsMultiplier: number;
   image: string | null;
+  video: string | null;
   explanation: string | null;
   choices: string[];
   _shuffleMap?: number[] | null;
@@ -44,7 +45,23 @@ export interface OrderingQuestion extends BaseQuestion {
   correctOrder: number[];
 }
 
-export type Question = McqQuestion | TrueFalseQuestion | MultiQuestion | FreetextQuestion | OrderingQuestion;
+export interface SliderQuestion extends BaseQuestion {
+  type: 'slider';
+  sliderMin: number;
+  sliderMax: number;
+  sliderStep: number;
+  correctValue: number;
+  tolerance: number;
+  unit: string;
+}
+
+export type Question =
+  | McqQuestion
+  | TrueFalseQuestion
+  | MultiQuestion
+  | FreetextQuestion
+  | OrderingQuestion
+  | SliderQuestion;
 
 export interface Quiz {
   id: string;
@@ -127,6 +144,9 @@ export interface AnswerResult {
   correctIndices?: number[];
   correctOrder?: number[];
   acceptedAnswers?: string[];
+  correctValue?: number;
+  tolerance?: number;
+  unit?: string;
 }
 
 export interface GameHistoryData {

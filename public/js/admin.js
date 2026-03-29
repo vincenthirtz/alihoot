@@ -14,11 +14,11 @@ const screens = {
   questionDisplay: document.getElementById('question-display'),
   stats: document.getElementById('stats-screen'),
   leaderboard: document.getElementById('admin-leaderboard'),
-  final: document.getElementById('final-screen')
+  final: document.getElementById('final-screen'),
 };
 
 function showScreen(name) {
-  Object.values(screens).forEach(s => s.classList.remove('active'));
+  Object.values(screens).forEach((s) => s.classList.remove('active'));
   screens[name].classList.add('active');
 }
 
@@ -62,8 +62,11 @@ socket.on('audio:play', ({ sound }) => AudioSystem.play(sound));
 // ========== SAVED QUIZZES (localStorage) ==========
 
 function getSavedQuizzes() {
-  try { return JSON.parse(localStorage.getItem('alihoot-saved-quizzes') || '[]'); }
-  catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem('alihoot-saved-quizzes') || '[]');
+  } catch {
+    return [];
+  }
 }
 
 function saveQuizToLocal(title, questions) {
@@ -89,7 +92,7 @@ function loadSavedQuiz(index) {
   document.getElementById('quiz-title').value = quiz.title;
   document.getElementById('questions-list').innerHTML = '';
   questionCount = 0;
-  quiz.questions.forEach(q => addQuestion(q));
+  quiz.questions.forEach((q) => addQuestion(q));
 }
 
 function renderSavedQuizzes() {
@@ -97,15 +100,21 @@ function renderSavedQuizzes() {
   const section = document.getElementById('saved-quizzes-section');
   const list = document.getElementById('saved-quiz-list');
 
-  if (saved.length === 0) { section.style.display = 'none'; return; }
+  if (saved.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
   section.style.display = 'block';
 
-  list.innerHTML = saved.map((q, i) =>
-    `<div class="saved-quiz-chip" onclick="loadSavedQuiz(${i})">
+  list.innerHTML = saved
+    .map(
+      (q, i) =>
+        `<div class="saved-quiz-chip" onclick="loadSavedQuiz(${i})">
       📝 ${q.title} (${q.questions.length}q)
       <span class="delete-saved" onclick="event.stopPropagation(); deleteSavedQuiz(${i})">&times;</span>
-    </div>`
-  ).join('');
+    </div>`,
+    )
+    .join('');
 }
 
 window.loadSavedQuiz = loadSavedQuiz;
@@ -122,23 +131,31 @@ async function loadCloudQuizzes() {
     const section = document.getElementById('cloud-quizzes-section');
     const list = document.getElementById('cloud-quiz-list');
 
-    if (!quizzes.length) { section.style.display = 'none'; return; }
+    if (!quizzes.length) {
+      section.style.display = 'none';
+      return;
+    }
     section.style.display = 'block';
 
-    list.innerHTML = quizzes.map(q => {
-      const date = new Date(q.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
-      const qCount = q.questions ? q.questions.length : 0;
-      return `<div class="saved-quiz-chip" onclick="loadCloudQuiz('${q.id}')">
+    list.innerHTML = quizzes
+      .map((q) => {
+        const date = new Date(q.created_at).toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'short',
+        });
+        const qCount = q.questions ? q.questions.length : 0;
+        return `<div class="saved-quiz-chip" onclick="loadCloudQuiz('${q.id}')">
         ☁️ ${q.title} (${qCount}q - ${date})
         <span class="delete-saved" onclick="event.stopPropagation(); deleteCloudQuiz('${q.id}')">&times;</span>
       </div>`;
-    }).join('');
+      })
+      .join('');
   } catch (e) {
     console.log('Cloud quizzes unavailable:', e.message);
   }
 }
 
-window.loadCloudQuiz = async function(id) {
+window.loadCloudQuiz = async function (id) {
   try {
     const res = await fetch(`/api/quizzes/${id}`);
     const quiz = await res.json();
@@ -147,7 +164,7 @@ window.loadCloudQuiz = async function(id) {
     document.getElementById('quiz-title').value = quiz.title;
     document.getElementById('questions-list').innerHTML = '';
     questionCount = 0;
-    quiz.questions.forEach(q => addQuestion(q));
+    quiz.questions.forEach((q) => addQuestion(q));
     if (quiz.shuffle_questions) document.getElementById('shuffle-questions').checked = true;
     if (quiz.shuffle_choices) document.getElementById('shuffle-choices').checked = true;
   } catch (e) {
@@ -155,7 +172,7 @@ window.loadCloudQuiz = async function(id) {
   }
 };
 
-window.deleteCloudQuiz = async function(id) {
+window.deleteCloudQuiz = async function (id) {
   try {
     await AdminAuth.authFetch(`/api/quizzes/${id}`, { method: 'DELETE' });
     loadCloudQuizzes();
@@ -171,7 +188,7 @@ loadCloudQuizzes();
 document.getElementById('export-quiz-btn').addEventListener('click', () => {
   const title = document.getElementById('quiz-title').value.trim() || 'quiz';
   const blocks = document.querySelectorAll('.question-block');
-  const questions = Array.from(blocks).map(block => getQuestionDataFromBlock(block));
+  const questions = Array.from(blocks).map((block) => getQuestionDataFromBlock(block));
 
   const data = { title, questions };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -199,7 +216,7 @@ document.getElementById('import-quiz-input').addEventListener('change', (e) => {
       document.getElementById('quiz-title').value = data.title;
       document.getElementById('questions-list').innerHTML = '';
       questionCount = 0;
-      data.questions.forEach(q => addQuestion(q));
+      data.questions.forEach((q) => addQuestion(q));
     } catch (err) {
       alert('Erreur de lecture du fichier JSON : ' + err.message);
     }
@@ -215,7 +232,8 @@ const questionTypes = {
   truefalse: { label: 'Vrai/Faux', icon: '✅' },
   multi: { label: 'Multi-reponses', icon: '☑️' },
   freetext: { label: 'Reponse libre', icon: '✏️' },
-  ordering: { label: 'Classement', icon: '📊' }
+  ordering: { label: 'Classement', icon: '📊' },
+  slider: { label: 'Curseur', icon: '🎚️' },
 };
 
 const defaultTimeLimits = {
@@ -223,7 +241,8 @@ const defaultTimeLimits = {
   truefalse: 10,
   multi: 30,
   freetext: 30,
-  ordering: 45
+  ordering: 45,
+  slider: 20,
 };
 
 function addQuestion(prefill = null) {
@@ -246,29 +265,38 @@ function addQuestion(prefill = null) {
       </div>
     </div>
     <div class="type-selector">
-      ${Object.entries(questionTypes).map(([k, v]) =>
-        `<button class="type-btn${k === type ? ' active' : ''}" data-type="${k}" onclick="changeQuestionType(this, '${k}')">${v.icon} ${v.label}</button>`
-      ).join('')}
+      ${Object.entries(questionTypes)
+        .map(
+          ([k, v]) =>
+            `<button class="type-btn${k === type ? ' active' : ''}" data-type="${k}" onclick="changeQuestionType(this, '${k}')">${v.icon} ${v.label}</button>`,
+        )
+        .join('')}
     </div>
     <input type="text" class="q-text-input" placeholder="Intitule de la question..." maxlength="200" value="${prefill?.text || ''}">
-    <input type="text" class="image-input" placeholder="🖼️ URL de l'image (optionnel)" value="${prefill?.image || ''}">
+    <div class="media-inputs">
+      <input type="text" class="image-input" placeholder="🖼️ URL de l'image (optionnel)" value="${prefill?.image || ''}">
+      <input type="text" class="video-input" placeholder="🎬 URL de la video YouTube (optionnel)" value="${prefill?.video || ''}">
+    </div>
     <div class="q-body"></div>
     <input type="text" class="explanation-input" placeholder="💡 Explication (optionnel, affichee apres la reponse)" maxlength="300" value="${prefill?.explanation || ''}">
     <div class="q-options-row">
       <div class="time-select">
         <label>Temps :</label>
         <select class="time-select-input">
-          ${[5,10,15,20,30,45,60,90,120].map(t =>
-            `<option value="${t}"${(prefill?.timeLimit || defaultTimeLimits[type] || 20)==t?' selected':''}>${t}s</option>`
-          ).join('\n          ')}
+          ${[5, 10, 15, 20, 30, 45, 60, 90, 120]
+            .map(
+              (t) =>
+                `<option value="${t}"${(prefill?.timeLimit || defaultTimeLimits[type] || 20) == t ? ' selected' : ''}>${t}s</option>`,
+            )
+            .join('\n          ')}
         </select>
       </div>
       <div class="points-select">
         <label>Points :</label>
         <select class="points-select-input">
-          <option value="1"${(prefill?.pointsMultiplier||1)==1?' selected':''}>x1</option>
-          <option value="2"${(prefill?.pointsMultiplier||1)==2?' selected':''}>x2 (bonus)</option>
-          <option value="3"${(prefill?.pointsMultiplier||1)==3?' selected':''}>x3 (super bonus)</option>
+          <option value="1"${(prefill?.pointsMultiplier || 1) == 1 ? ' selected' : ''}>x1</option>
+          <option value="2"${(prefill?.pointsMultiplier || 1) == 2 ? ' selected' : ''}>x2 (bonus)</option>
+          <option value="3"${(prefill?.pointsMultiplier || 1) == 3 ? ' selected' : ''}>x3 (super bonus)</option>
         </select>
       </div>
     </div>
@@ -282,16 +310,59 @@ function renderQuestionBody(block, type, prefill = null) {
   const body = block.querySelector('.q-body');
   block.dataset.type = type;
 
-  if (type === 'ordering') {
+  if (type === 'slider') {
+    const sMin = prefill?.sliderMin ?? 0;
+    const sMax = prefill?.sliderMax ?? 100;
+    const sStep = prefill?.sliderStep ?? 1;
+    const correctVal = prefill?.correctValue ?? 50;
+    const tol = prefill?.tolerance ?? 5;
+    const unit = prefill?.unit ?? '';
+    body.innerHTML = `
+      <div class="slider-config">
+        <div class="slider-config-row">
+          <div class="slider-field">
+            <label>Min</label>
+            <input type="number" class="slider-min" value="${sMin}" step="any">
+          </div>
+          <div class="slider-field">
+            <label>Max</label>
+            <input type="number" class="slider-max" value="${sMax}" step="any">
+          </div>
+          <div class="slider-field">
+            <label>Pas</label>
+            <input type="number" class="slider-step" value="${sStep}" min="0.1" step="any">
+          </div>
+        </div>
+        <div class="slider-config-row">
+          <div class="slider-field">
+            <label>Bonne reponse</label>
+            <input type="number" class="slider-correct" value="${correctVal}" step="any">
+          </div>
+          <div class="slider-field">
+            <label>Tolerance (±)</label>
+            <input type="number" class="slider-tolerance" value="${tol}" min="0" step="any">
+          </div>
+          <div class="slider-field">
+            <label>Unite</label>
+            <input type="text" class="slider-unit" value="${unit}" maxlength="20" placeholder="kg, km, %...">
+          </div>
+        </div>
+        <small style="color:var(--card-label);">Le joueur voit un curseur de <b>${sMin}</b> a <b>${sMax}</b>. Reponse acceptee : <b>${correctVal} ± ${tol}</b>${unit ? ' ' + unit : ''}</small>
+      </div>`;
+  } else if (type === 'ordering') {
     const items = prefill?.items || ['', '', '', ''];
     body.innerHTML = `
       <div class="ordering-list">
         <small style="color:var(--card-label);">Entre les elements dans le BON ordre (de haut en bas)</small>
-        ${items.map((item, i) => `
+        ${items
+          .map(
+            (item, i) => `
           <div class="ordering-item">
             <span class="ordering-num">${i + 1}.</span>
             <input type="text" placeholder="Element ${i + 1}" maxlength="100" value="${item}">
-          </div>`).join('')}
+          </div>`,
+          )
+          .join('')}
       </div>
       <div class="choice-actions">
         <button class="choice-action-btn" onclick="addOrderingItem(this)">+ Element</button>
@@ -302,11 +373,11 @@ function renderQuestionBody(block, type, prefill = null) {
     body.innerHTML = `
       <div class="choices-grid" style="grid-template-columns:1fr 1fr;">
         <div class="choice-item">
-          <input type="radio" name="correct-${block.dataset.index}" value="0"${correct===0?' checked':''}>
+          <input type="radio" name="correct-${block.dataset.index}" value="0"${correct === 0 ? ' checked' : ''}>
           <span style="font-weight:700;color:var(--green);">✅ Vrai</span>
         </div>
         <div class="choice-item">
-          <input type="radio" name="correct-${block.dataset.index}" value="1"${correct===1?' checked':''}>
+          <input type="radio" name="correct-${block.dataset.index}" value="1"${correct === 1 ? ' checked' : ''}>
           <span style="font-weight:700;color:var(--red);">❌ Faux</span>
         </div>
       </div>`;
@@ -322,11 +393,15 @@ function renderQuestionBody(block, type, prefill = null) {
     const correctIndices = prefill?.correctIndices || [0];
     body.innerHTML = `
       <div class="choices-grid">
-        ${choices.map((c, i) => `
+        ${choices
+          .map(
+            (c, i) => `
           <div class="choice-item">
-            <input type="checkbox" name="correct-${block.dataset.index}" value="${i}"${correctIndices.includes(i)?' checked':''}>
-            <input type="text" placeholder="Reponse ${i+1}" maxlength="100" value="${c}">
-          </div>`).join('')}
+            <input type="checkbox" name="correct-${block.dataset.index}" value="${i}"${correctIndices.includes(i) ? ' checked' : ''}>
+            <input type="text" placeholder="Reponse ${i + 1}" maxlength="100" value="${c}">
+          </div>`,
+          )
+          .join('')}
       </div>
       <div class="choice-actions">
         <button class="choice-action-btn" onclick="addChoice(this)">+ Choix</button>
@@ -338,11 +413,15 @@ function renderQuestionBody(block, type, prefill = null) {
     const correct = prefill?.correctIndex ?? 0;
     body.innerHTML = `
       <div class="choices-grid">
-        ${choices.map((c, i) => `
+        ${choices
+          .map(
+            (c, i) => `
           <div class="choice-item">
-            <input type="radio" name="correct-${block.dataset.index}" value="${i}"${i===correct?' checked':''}>
-            <input type="text" placeholder="Reponse ${i+1}" maxlength="100" value="${c}">
-          </div>`).join('')}
+            <input type="radio" name="correct-${block.dataset.index}" value="${i}"${i === correct ? ' checked' : ''}>
+            <input type="text" placeholder="Reponse ${i + 1}" maxlength="100" value="${c}">
+          </div>`,
+          )
+          .join('')}
       </div>
       <div class="choice-actions">
         <button class="choice-action-btn" onclick="addChoice(this)">+ Choix</button>
@@ -351,13 +430,13 @@ function renderQuestionBody(block, type, prefill = null) {
   }
 }
 
-window.changeQuestionType = function(btn, type) {
+window.changeQuestionType = function (btn, type) {
   const block = btn.closest('.question-block');
   const prevType = block.dataset.type;
   const timeSelect = block.querySelector('.time-select-input');
   const currentTime = parseInt(timeSelect.value);
 
-  block.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  block.querySelectorAll('.type-btn').forEach((b) => b.classList.remove('active'));
   btn.classList.add('active');
   renderQuestionBody(block, type);
 
@@ -367,7 +446,7 @@ window.changeQuestionType = function(btn, type) {
   }
 };
 
-window.addChoice = function(btn) {
+window.addChoice = function (btn) {
   const block = btn.closest('.question-block');
   const grid = block.querySelector('.choices-grid');
   const items = grid.querySelectorAll('.choice-item');
@@ -375,17 +454,24 @@ window.addChoice = function(btn) {
   const type = block.dataset.type;
   const inputType = type === 'multi' ? 'checkbox' : 'radio';
   const idx = items.length;
-  const colors = ['var(--red)', 'var(--blue)', 'var(--yellow)', 'var(--green)', 'var(--purple)', '#e67e22'];
+  const colors = [
+    'var(--red)',
+    'var(--blue)',
+    'var(--yellow)',
+    'var(--green)',
+    'var(--purple)',
+    '#e67e22',
+  ];
   const div = document.createElement('div');
   div.className = 'choice-item';
   div.innerHTML = `
     <input type="${inputType}" name="correct-${block.dataset.index}" value="${idx}">
-    <input type="text" placeholder="Reponse ${idx+1}" maxlength="100" style="border-left: 3px solid ${colors[idx] || '#999'};">
+    <input type="text" placeholder="Reponse ${idx + 1}" maxlength="100" style="border-left: 3px solid ${colors[idx] || '#999'};">
   `;
   grid.appendChild(div);
 };
 
-window.removeChoice = function(btn) {
+window.removeChoice = function (btn) {
   const block = btn.closest('.question-block');
   const grid = block.querySelector('.choices-grid');
   const items = grid.querySelectorAll('.choice-item');
@@ -393,7 +479,7 @@ window.removeChoice = function(btn) {
   items[items.length - 1].remove();
 };
 
-window.addOrderingItem = function(btn) {
+window.addOrderingItem = function (btn) {
   const block = btn.closest('.question-block');
   const list = block.querySelector('.ordering-list');
   const items = list.querySelectorAll('.ordering-item');
@@ -405,7 +491,7 @@ window.addOrderingItem = function(btn) {
   list.appendChild(div);
 };
 
-window.removeOrderingItem = function(btn) {
+window.removeOrderingItem = function (btn) {
   const block = btn.closest('.question-block');
   const list = block.querySelector('.ordering-list');
   const items = list.querySelectorAll('.ordering-item');
@@ -422,21 +508,48 @@ function getQuestionDataFromBlock(block) {
   const pointsMultiplier = parseInt(block.querySelector('.points-select-input').value) || 1;
   const explanation = block.querySelector('.explanation-input')?.value.trim() || '';
 
-  const q = { text, type, image: image || null, timeLimit, pointsMultiplier, explanation: explanation || null };
+  const video = block.querySelector('.video-input')?.value.trim() || '';
+  const q = {
+    text,
+    type,
+    image: image || null,
+    video: video || null,
+    timeLimit,
+    pointsMultiplier,
+    explanation: explanation || null,
+  };
 
-  if (type === 'ordering') {
-    q.items = Array.from(block.querySelectorAll('.ordering-item input')).map(c => c.value.trim());
+  if (type === 'slider') {
+    q.sliderMin = parseFloat(block.querySelector('.slider-min')?.value) || 0;
+    q.sliderMax = parseFloat(block.querySelector('.slider-max')?.value) || 100;
+    q.sliderStep = parseFloat(block.querySelector('.slider-step')?.value) || 1;
+    q.correctValue = parseFloat(block.querySelector('.slider-correct')?.value) || 0;
+    q.tolerance = parseFloat(block.querySelector('.slider-tolerance')?.value) || 0;
+    q.unit = block.querySelector('.slider-unit')?.value.trim() || '';
+  } else if (type === 'ordering') {
+    q.items = Array.from(block.querySelectorAll('.ordering-item input')).map((c) => c.value.trim());
   } else if (type === 'truefalse') {
     const radio = block.querySelector('input[type="radio"]:checked');
     q.correctIndex = radio ? parseInt(radio.value) : 0;
   } else if (type === 'freetext') {
     const input = block.querySelector('.freetext-answers input');
-    q.acceptedAnswers = input ? input.value.split(',').map(a => a.trim()).filter(a => a) : [];
+    q.acceptedAnswers = input
+      ? input.value
+          .split(',')
+          .map((a) => a.trim())
+          .filter((a) => a)
+      : [];
   } else if (type === 'multi') {
-    q.choices = Array.from(block.querySelectorAll('.choice-item input[type="text"]')).map(c => c.value.trim());
-    q.correctIndices = Array.from(block.querySelectorAll('.choice-item input[type="checkbox"]:checked')).map(c => parseInt(c.value));
+    q.choices = Array.from(block.querySelectorAll('.choice-item input[type="text"]')).map((c) =>
+      c.value.trim(),
+    );
+    q.correctIndices = Array.from(
+      block.querySelectorAll('.choice-item input[type="checkbox"]:checked'),
+    ).map((c) => parseInt(c.value));
   } else {
-    q.choices = Array.from(block.querySelectorAll('.choice-item input[type="text"]')).map(c => c.value.trim());
+    q.choices = Array.from(block.querySelectorAll('.choice-item input[type="text"]')).map((c) =>
+      c.value.trim(),
+    );
     const radio = block.querySelector('input[type="radio"]:checked');
     q.correctIndex = radio ? parseInt(radio.value) : 0;
   }
@@ -444,13 +557,13 @@ function getQuestionDataFromBlock(block) {
   return q;
 }
 
-window.duplicateQuestion = function(btn) {
+window.duplicateQuestion = function (btn) {
   const block = btn.closest('.question-block');
   const data = getQuestionDataFromBlock(block);
   addQuestion(data);
 };
 
-window.moveQuestion = function(btn, direction) {
+window.moveQuestion = function (btn, direction) {
   const block = btn.closest('.question-block');
   const list = document.getElementById('questions-list');
   const blocks = [...list.querySelectorAll('.question-block')];
@@ -464,7 +577,7 @@ window.moveQuestion = function(btn, direction) {
   renumberQuestions();
 };
 
-window.removeQuestion = function(btn) {
+window.removeQuestion = function (btn) {
   btn.closest('.question-block').remove();
   renumberQuestions();
 };
@@ -485,41 +598,62 @@ let previewQuestions = [];
 const previewBarColors = ['btn-red', 'btn-blue', 'btn-yellow', 'btn-green', 'btn-red', 'btn-blue'];
 const previewShapes = ['&#9650;', '&#9670;', '&#9679;', '&#9724;', '&#9733;', '&#9829;'];
 
-window.openPreview = function() {
+window.openPreview = function () {
   const blocks = document.querySelectorAll('.question-block');
   if (blocks.length === 0) return;
 
-  previewQuestions = Array.from(blocks).map(block => getQuestionDataFromBlock(block));
+  previewQuestions = Array.from(blocks).map((block) => getQuestionDataFromBlock(block));
   previewIndex = 0;
   renderPreview();
   document.getElementById('preview-overlay').style.display = 'flex';
 };
 
-window.closePreview = function() {
+window.closePreview = function () {
   document.getElementById('preview-overlay').style.display = 'none';
 };
 
-window.previewPrev = function() {
-  if (previewIndex > 0) { previewIndex--; renderPreview(); }
+window.previewPrev = function () {
+  if (previewIndex > 0) {
+    previewIndex--;
+    renderPreview();
+  }
 };
 
-window.previewNext = function() {
-  if (previewIndex < previewQuestions.length - 1) { previewIndex++; renderPreview(); }
+window.previewNext = function () {
+  if (previewIndex < previewQuestions.length - 1) {
+    previewIndex++;
+    renderPreview();
+  }
 };
 
 function renderPreview() {
   const q = previewQuestions[previewIndex];
   const body = document.getElementById('preview-body');
-  document.getElementById('preview-counter').textContent = `${previewIndex + 1}/${previewQuestions.length}`;
+  document.getElementById('preview-counter').textContent =
+    `${previewIndex + 1}/${previewQuestions.length}`;
 
-  const multiplierBadge = (q.pointsMultiplier && q.pointsMultiplier > 1) ? `<span class="multiplier-badge">x${q.pointsMultiplier}</span>` : '';
+  const multiplierBadge =
+    q.pointsMultiplier && q.pointsMultiplier > 1
+      ? `<span class="multiplier-badge">x${q.pointsMultiplier}</span>`
+      : '';
 
   let answersHtml = '';
-  if (q.type === 'ordering') {
+  if (q.type === 'slider') {
+    const unit = q.unit || '';
+    const mid = ((q.sliderMin || 0) + (q.sliderMax || 100)) / 2;
+    answersHtml = `<div class="slider-preview-container">
+      <div class="slider-labels"><span>${q.sliderMin || 0}${unit}</span><span>${q.sliderMax || 100}${unit}</span></div>
+      <input type="range" class="slider-input" min="${q.sliderMin || 0}" max="${q.sliderMax || 100}" step="${q.sliderStep || 1}" value="${mid}" disabled>
+      <div class="slider-value">${mid}${unit}</div>
+    </div>`;
+  } else if (q.type === 'ordering') {
     const items = q.items || [];
-    answersHtml = `<div class="preview-ordering">${items.map(item =>
-      `<div class="ordering-drag-item" style="cursor:default;"><span class="drag-handle">☰</span><span class="drag-text">${item}</span></div>`
-    ).join('')}</div>`;
+    answersHtml = `<div class="preview-ordering">${items
+      .map(
+        (item) =>
+          `<div class="ordering-drag-item" style="cursor:default;"><span class="drag-handle">☰</span><span class="drag-text">${item}</span></div>`,
+      )
+      .join('')}</div>`;
   } else if (q.type === 'truefalse') {
     answersHtml = `<div class="answer-grid cols-1" style="pointer-events:none;">
       <div class="answer-btn btn-green"><span class="shape">✅</span><span class="text">Vrai</span></div>
@@ -530,9 +664,13 @@ function renderPreview() {
   } else {
     const choices = q.choices || [];
     answersHtml = `<div class="answer-grid" style="pointer-events:none;">
-      ${choices.filter(c => c).map((c, i) =>
-        `<div class="answer-btn ${previewBarColors[i] || 'btn-red'}"><span class="shape">${previewShapes[i] || ''}</span><span class="text">${c}</span></div>`
-      ).join('')}
+      ${choices
+        .filter((c) => c)
+        .map(
+          (c, i) =>
+            `<div class="answer-btn ${previewBarColors[i] || 'btn-red'}"><span class="shape">${previewShapes[i] || ''}</span><span class="text">${c}</span></div>`,
+        )
+        .join('')}
     </div>`;
   }
 
@@ -541,6 +679,16 @@ function renderPreview() {
     <div class="timer-text" style="font-size:2rem;">${q.timeLimit}s</div>
     <div class="timer-bar-container"><div class="timer-bar" style="width:100%;"></div></div>
     ${q.image ? `<img class="question-image" src="${q.image}" style="display:block;" alt="">` : ''}
+    ${
+      q.video
+        ? (() => {
+            const ytId = extractYouTubeId(q.video);
+            if (ytId)
+              return `<div class="question-video" style="display:block;"><iframe src="https://www.youtube-nocookie.com/embed/${ytId}?rel=0" frameborder="0" allowfullscreen></iframe></div>`;
+            return `<div class="question-video" style="display:block;"><video src="${q.video}" controls playsinline></video></div>`;
+          })()
+        : ''
+    }
     <div class="question-text" style="font-size:1.2rem;">${q.text || '<em style="opacity:0.5;">Sans titre</em>'}</div>
     ${answersHtml}
     ${q.explanation ? `<div class="explanation-display">💡 ${q.explanation}</div>` : ''}
@@ -558,10 +706,16 @@ document.getElementById('create-quiz-btn').addEventListener('click', () => {
   const title = document.getElementById('quiz-title').value.trim();
   const errorEl = document.getElementById('create-error');
 
-  if (!title) { errorEl.textContent = 'Donne un titre au quiz'; return; }
+  if (!title) {
+    errorEl.textContent = 'Donne un titre au quiz';
+    return;
+  }
 
   const blocks = document.querySelectorAll('.question-block');
-  if (blocks.length === 0) { errorEl.textContent = 'Ajoute au moins une question'; return; }
+  if (blocks.length === 0) {
+    errorEl.textContent = 'Ajoute au moins une question';
+    return;
+  }
 
   const questions = [];
   let valid = true;
@@ -574,36 +728,84 @@ document.getElementById('create-quiz-btn').addEventListener('click', () => {
     const timeLimit = parseInt(block.querySelector('.time-select-input').value);
     const pointsMultiplier = parseInt(block.querySelector('.points-select-input').value) || 1;
 
-    if (!text) { errorEl.textContent = `Question ${i+1} : intitule manquant`; valid = false; return; }
+    if (!text) {
+      errorEl.textContent = `Question ${i + 1} : intitule manquant`;
+      valid = false;
+      return;
+    }
 
+    const video = block.querySelector('.video-input')?.value.trim() || '';
     const explanation = block.querySelector('.explanation-input')?.value.trim() || '';
-    const q = { text, type, image: image || null, timeLimit, pointsMultiplier, explanation: explanation || null };
+    const q = {
+      text,
+      type,
+      image: image || null,
+      video: video || null,
+      timeLimit,
+      pointsMultiplier,
+      explanation: explanation || null,
+    };
 
-    if (type === 'ordering') {
+    if (type === 'slider') {
+      q.sliderMin = parseFloat(block.querySelector('.slider-min')?.value) || 0;
+      q.sliderMax = parseFloat(block.querySelector('.slider-max')?.value) || 100;
+      q.sliderStep = parseFloat(block.querySelector('.slider-step')?.value) || 1;
+      q.correctValue = parseFloat(block.querySelector('.slider-correct')?.value);
+      q.tolerance = parseFloat(block.querySelector('.slider-tolerance')?.value) || 0;
+      q.unit = block.querySelector('.slider-unit')?.value.trim() || '';
+      if (isNaN(q.correctValue)) {
+        errorEl.textContent = `Question ${i + 1} : valeur correcte manquante`;
+        valid = false;
+        return;
+      }
+    } else if (type === 'ordering') {
       const itemInputs = block.querySelectorAll('.ordering-item input');
-      q.items = Array.from(itemInputs).map(c => c.value.trim());
-      if (q.items.filter(c => c).length < 2) { errorEl.textContent = `Question ${i+1} : min 2 elements`; valid = false; return; }
+      q.items = Array.from(itemInputs).map((c) => c.value.trim());
+      if (q.items.filter((c) => c).length < 2) {
+        errorEl.textContent = `Question ${i + 1} : min 2 elements`;
+        valid = false;
+        return;
+      }
     } else if (type === 'truefalse') {
       const radio = block.querySelector('input[type="radio"]:checked');
       q.correctIndex = radio ? parseInt(radio.value) : 0;
     } else if (type === 'freetext') {
       const input = block.querySelector('.freetext-answers input');
-      const answers = input.value.split(',').map(a => a.trim()).filter(a => a);
-      if (answers.length === 0) { errorEl.textContent = `Question ${i+1} : reponses acceptees manquantes`; valid = false; return; }
+      const answers = input.value
+        .split(',')
+        .map((a) => a.trim())
+        .filter((a) => a);
+      if (answers.length === 0) {
+        errorEl.textContent = `Question ${i + 1} : reponses acceptees manquantes`;
+        valid = false;
+        return;
+      }
       q.acceptedAnswers = answers;
     } else if (type === 'multi') {
       const choiceInputs = block.querySelectorAll('.choice-item input[type="text"]');
       const checkboxes = block.querySelectorAll('.choice-item input[type="checkbox"]:checked');
-      q.choices = Array.from(choiceInputs).map(c => c.value.trim());
-      q.correctIndices = Array.from(checkboxes).map(c => parseInt(c.value));
-      if (q.choices.filter(c => c).length < 2) { errorEl.textContent = `Question ${i+1} : min 2 reponses`; valid = false; return; }
-      if (q.correctIndices.length === 0) { errorEl.textContent = `Question ${i+1} : coche au moins une bonne reponse`; valid = false; return; }
+      q.choices = Array.from(choiceInputs).map((c) => c.value.trim());
+      q.correctIndices = Array.from(checkboxes).map((c) => parseInt(c.value));
+      if (q.choices.filter((c) => c).length < 2) {
+        errorEl.textContent = `Question ${i + 1} : min 2 reponses`;
+        valid = false;
+        return;
+      }
+      if (q.correctIndices.length === 0) {
+        errorEl.textContent = `Question ${i + 1} : coche au moins une bonne reponse`;
+        valid = false;
+        return;
+      }
     } else {
       const choiceInputs = block.querySelectorAll('.choice-item input[type="text"]');
       const radio = block.querySelector('input[type="radio"]:checked');
-      q.choices = Array.from(choiceInputs).map(c => c.value.trim());
+      q.choices = Array.from(choiceInputs).map((c) => c.value.trim());
       q.correctIndex = radio ? parseInt(radio.value) : 0;
-      if (q.choices.filter(c => c).length < 2) { errorEl.textContent = `Question ${i+1} : min 2 reponses`; valid = false; return; }
+      if (q.choices.filter((c) => c).length < 2) {
+        errorEl.textContent = `Question ${i + 1} : min 2 reponses`;
+        valid = false;
+        return;
+      }
     }
 
     questions.push(q);
@@ -637,9 +839,13 @@ socket.on('admin:room-created', ({ pin, adminToken: token }) => {
   const qrEl = document.getElementById('qr-code');
   qrEl.innerHTML = '';
   if (typeof QRCode !== 'undefined') {
-    QRCode.toCanvas(url + '?pin=' + pin, { width: 180, margin: 1 }, (err, canvas) => {
-      if (!err) qrEl.appendChild(canvas);
-    });
+    QRCode.toCanvas(
+      url + '?pin=' + pin,
+      { width: 200, margin: 1, color: { dark: '#46178f', light: '#ffffff' } },
+      (err, canvas) => {
+        if (!err) qrEl.appendChild(canvas);
+      },
+    );
   }
 
   showScreen('room');
@@ -680,13 +886,16 @@ socket.on('admin:reconnected', ({ pin, state, players, currentQuestionIndex, qui
 function updatePlayerList(players) {
   const count = players.length;
   document.getElementById('player-count').textContent = `${count} joueur${count > 1 ? 's' : ''}`;
-  document.getElementById('room-players').innerHTML = players.map(p =>
-    `<div class="player-chip">
+  document.getElementById('room-players').innerHTML = players
+    .map(
+      (p) =>
+        `<div class="player-chip">
       <span class="chip-avatar">${p.avatar?.icon || '👤'}</span>
       ${p.nickname}
       <button class="kick-btn" onclick="kickPlayer('${p.nickname}')" title="Expulser">&times;</button>
-    </div>`
-  ).join('');
+    </div>`,
+    )
+    .join('');
   document.getElementById('start-game-btn').disabled = count === 0;
 }
 
@@ -695,7 +904,7 @@ socket.on('room:player-joined', ({ players }) => {
   AudioSystem.play('join');
 });
 
-window.kickPlayer = function(nickname) {
+window.kickPlayer = function (nickname) {
   socket.emit('admin:kick', { pin: currentPin, nickname });
 };
 
@@ -735,59 +944,125 @@ const barColors = ['btn-red', 'btn-blue', 'btn-yellow', 'btn-green', 'btn-red', 
 const shapes = ['&#9650;', '&#9670;', '&#9679;', '&#9724;', '&#9733;', '&#9829;'];
 const statBarColors = ['bar-red', 'bar-blue', 'bar-yellow', 'bar-green', 'bar-red', 'bar-blue'];
 
-socket.on('game:question', ({ questionIndex, text, choices, timeLimit, total, type, image, pointsMultiplier, orderingItems, orderingMap }) => {
-  currentQuestionData = { questionIndex, text, choices, timeLimit, total, type, image, pointsMultiplier, orderingItems, orderingMap };
-  totalQuestions = total;
+// YouTube URL parser
+function extractYouTubeId(url) {
+  const match = url.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([a-zA-Z0-9_-]{11})/,
+  );
+  return match ? match[1] : null;
+}
 
-  const multiplierBadge = (pointsMultiplier && pointsMultiplier > 1) ? ` <span class="multiplier-badge">x${pointsMultiplier}</span>` : '';
-  document.getElementById('admin-q-counter').innerHTML = `Question ${questionIndex + 1} / ${total}${multiplierBadge}`;
-  document.getElementById('admin-q-text').textContent = text;
-  document.getElementById('admin-timer').textContent = timeLimit;
-  document.getElementById('admin-answer-count').textContent = '0 reponses';
+socket.on(
+  'game:question',
+  ({
+    questionIndex,
+    text,
+    choices,
+    timeLimit,
+    total,
+    type,
+    image,
+    video,
+    pointsMultiplier,
+    orderingItems,
+    orderingMap,
+  }) => {
+    currentQuestionData = {
+      questionIndex,
+      text,
+      choices,
+      timeLimit,
+      total,
+      type,
+      image,
+      video,
+      pointsMultiplier,
+      orderingItems,
+      orderingMap,
+    };
+    totalQuestions = total;
 
-  // Progress bar
-  const progressBar = document.getElementById('admin-progress-bar');
-  progressBar.innerHTML = Array.from({ length: total }, (_, i) => {
-    const cls = i < questionIndex ? 'done' : i === questionIndex ? 'current' : '';
-    return `<div class="progress-dot ${cls}"></div>`;
-  }).join('');
+    const multiplierBadge =
+      pointsMultiplier && pointsMultiplier > 1
+        ? ` <span class="multiplier-badge">x${pointsMultiplier}</span>`
+        : '';
+    document.getElementById('admin-q-counter').innerHTML =
+      `Question ${questionIndex + 1} / ${total}${multiplierBadge}`;
+    document.getElementById('admin-q-text').textContent = text;
+    document.getElementById('admin-timer').textContent = timeLimit;
+    document.getElementById('admin-answer-count').textContent = '0 reponses';
 
-  // Image
-  const imgEl = document.getElementById('admin-q-image');
-  if (image) { imgEl.src = image; imgEl.style.display = 'block'; }
-  else { imgEl.style.display = 'none'; }
+    // Progress bar
+    const progressBar = document.getElementById('admin-progress-bar');
+    progressBar.innerHTML = Array.from({ length: total }, (_, i) => {
+      const cls = i < questionIndex ? 'done' : i === questionIndex ? 'current' : '';
+      return `<div class="progress-dot ${cls}"></div>`;
+    }).join('');
 
-  // Timer bar
-  const timerBar = document.getElementById('admin-timer-bar');
-  timerBar.style.transition = 'none';
-  timerBar.style.width = '100%';
-  timerBar.offsetHeight;
-  timerBar.style.transition = `width ${timeLimit}s linear`;
-  timerBar.style.width = '0%';
+    // Image
+    const imgEl = document.getElementById('admin-q-image');
+    if (image) {
+      imgEl.src = image;
+      imgEl.style.display = 'block';
+    } else {
+      imgEl.style.display = 'none';
+    }
 
-  // Answer grid
-  const grid = document.getElementById('admin-answer-grid');
-  if (type === 'ordering') {
-    grid.className = 'answer-grid cols-1';
-    const items = currentQuestionData.orderingItems || [];
-    grid.innerHTML = `<div style="text-align:center;font-weight:700;opacity:0.7;font-size:1.2rem;">📊 Classement - ${items.length} elements a ordonner</div>`;
-  } else if (type === 'truefalse') {
-    grid.className = 'answer-grid cols-1';
-    grid.innerHTML = `
+    // Video
+    const videoContainer = document.getElementById('admin-q-video');
+    if (video) {
+      const ytId = extractYouTubeId(video);
+      if (ytId) {
+        videoContainer.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${ytId}?rel=0&modestbranding=1" frameborder="0" allowfullscreen></iframe>`;
+      } else {
+        videoContainer.innerHTML = `<video src="${video}" controls playsinline preload="metadata"></video>`;
+      }
+      videoContainer.style.display = 'block';
+    } else {
+      videoContainer.innerHTML = '';
+      videoContainer.style.display = 'none';
+    }
+
+    // Timer bar
+    const timerBar = document.getElementById('admin-timer-bar');
+    timerBar.style.transition = 'none';
+    timerBar.style.width = '100%';
+    timerBar.offsetHeight;
+    timerBar.style.transition = `width ${timeLimit}s linear`;
+    timerBar.style.width = '0%';
+
+    // Answer grid
+    const grid = document.getElementById('admin-answer-grid');
+    if (type === 'slider') {
+      const s = currentQuestionData.slider || {};
+      const unit = s.unit || '';
+      grid.className = 'answer-grid cols-1';
+      grid.innerHTML = `<div style="text-align:center;font-weight:700;opacity:0.7;font-size:1.2rem;">🎚️ Curseur : ${s.sliderMin}${unit} — ${s.sliderMax}${unit}</div>`;
+    } else if (type === 'ordering') {
+      grid.className = 'answer-grid cols-1';
+      const items = currentQuestionData.orderingItems || [];
+      grid.innerHTML = `<div style="text-align:center;font-weight:700;opacity:0.7;font-size:1.2rem;">📊 Classement - ${items.length} elements a ordonner</div>`;
+    } else if (type === 'truefalse') {
+      grid.className = 'answer-grid cols-1';
+      grid.innerHTML = `
       <div class="answer-btn btn-green"><span class="shape">✅</span><span class="text">Vrai</span></div>
       <div class="answer-btn btn-red"><span class="shape">❌</span><span class="text">Faux</span></div>`;
-  } else if (type === 'freetext') {
-    grid.className = 'answer-grid cols-1';
-    grid.innerHTML = `<div style="text-align:center;font-weight:700;opacity:0.7;font-size:1.2rem;">✏️ Reponse libre</div>`;
-  } else {
-    grid.className = 'answer-grid';
-    grid.innerHTML = choices.map((c, i) =>
-      `<div class="answer-btn ${barColors[i] || 'btn-red'}"><span class="shape">${shapes[i] || ''}</span><span class="text">${c}</span></div>`
-    ).join('');
-  }
+    } else if (type === 'freetext') {
+      grid.className = 'answer-grid cols-1';
+      grid.innerHTML = `<div style="text-align:center;font-weight:700;opacity:0.7;font-size:1.2rem;">✏️ Reponse libre</div>`;
+    } else {
+      grid.className = 'answer-grid';
+      grid.innerHTML = choices
+        .map(
+          (c, i) =>
+            `<div class="answer-btn ${barColors[i] || 'btn-red'}"><span class="shape">${shapes[i] || ''}</span><span class="text">${c}</span></div>`,
+        )
+        .join('');
+    }
 
-  showScreen('questionDisplay');
-});
+    showScreen('questionDisplay');
+  },
+);
 
 socket.on('game:timer-tick', ({ remaining }) => {
   const el = document.getElementById('admin-timer');
@@ -805,7 +1080,37 @@ socket.on('game:answer-stats', (stats) => {
   const freetextEl = document.getElementById('freetext-stats');
   const barsEl = document.getElementById('stats-bars');
 
-  if (stats.type === 'ordering') {
+  if (stats.type === 'slider') {
+    barsEl.style.display = 'none';
+    freetextEl.style.display = 'flex';
+    const unit = stats.unit || '';
+    const avg =
+      stats.answers.length > 0
+        ? (stats.answers.reduce((a, b) => a + b, 0) / stats.answers.length).toFixed(1)
+        : '-';
+    const tolMin = stats.correctValue - stats.tolerance;
+    const tolMax = stats.correctValue + stats.tolerance;
+    freetextEl.innerHTML = `
+      <div style="text-align:center; width:100%;">
+        <div style="font-size:1.3rem; font-weight:800; margin-bottom:10px;">🎚️ Bonne reponse : ${stats.correctValue}${unit}${stats.tolerance > 0 ? ` (± ${stats.tolerance})` : ''}</div>
+        <div class="slider-stats-bar">
+          <div class="slider-stats-track">
+            <div class="slider-stats-zone" style="left:${((tolMin - stats.sliderMin) / (stats.sliderMax - stats.sliderMin)) * 100}%;width:${((tolMax - tolMin) / (stats.sliderMax - stats.sliderMin)) * 100}%"></div>
+            ${stats.answers
+              .map((v) => {
+                const pct = ((v - stats.sliderMin) / (stats.sliderMax - stats.sliderMin)) * 100;
+                const isOk = Math.abs(v - stats.correctValue) <= stats.tolerance;
+                return `<div class="slider-stats-dot ${isOk ? 'ok' : 'ko'}" style="left:${pct}%" title="${v}${unit}"></div>`;
+              })
+              .join('')}
+          </div>
+          <div class="slider-stats-labels"><span>${stats.sliderMin}${unit}</span><span>${stats.sliderMax}${unit}</span></div>
+        </div>
+        <div style="margin-top:15px; font-weight:700;">Moyenne : ${avg}${unit} — ${stats.correctCount} / ${stats.totalAnswered} dans la zone</div>
+      </div>`;
+    document.getElementById('stats-total').textContent =
+      `${stats.totalAnswered} / ${stats.total} reponses`;
+  } else if (stats.type === 'ordering') {
     barsEl.style.display = 'none';
     freetextEl.style.display = 'flex';
     freetextEl.innerHTML = `
@@ -814,7 +1119,8 @@ socket.on('game:answer-stats', (stats) => {
         ${stats.items.map((item, i) => `<div style="padding:6px 0; font-weight:600;">${i + 1}. ${item}</div>`).join('')}
         <div style="margin-top:15px; font-weight:700;">${stats.correctCount} / ${stats.totalAnswered} ont trouve le bon ordre</div>
       </div>`;
-    document.getElementById('stats-total').textContent = `${stats.totalAnswered} / ${stats.total} reponses`;
+    document.getElementById('stats-total').textContent =
+      `${stats.totalAnswered} / ${stats.total} reponses`;
   } else if (stats.type === 'freetext') {
     barsEl.style.display = 'none';
     freetextEl.style.display = 'flex';
@@ -823,25 +1129,29 @@ socket.on('game:answer-stats', (stats) => {
       .map(([text, count]) => {
         const isCorrect = stats.acceptedAnswers.includes(text.toLowerCase());
         return `<div class="freetext-answer-chip ${isCorrect ? 'correct' : 'wrong'}">${text} (${count})</div>`;
-      }).join('');
+      })
+      .join('');
     document.getElementById('stats-total').textContent = '';
   } else {
     barsEl.style.display = 'flex';
     freetextEl.style.display = 'none';
     const maxCount = Math.max(...stats.counts, 1);
 
-    barsEl.innerHTML = stats.counts.map((count, i) => {
-      const heightPct = (count / maxCount) * 100;
-      const isCorrect = stats.type === 'multi'
-        ? (stats.correctIndices || []).includes(i)
-        : i === stats.correctIndex;
-      return `<div class="stat-bar-wrapper">
+    barsEl.innerHTML = stats.counts
+      .map((count, i) => {
+        const heightPct = (count / maxCount) * 100;
+        const isCorrect =
+          stats.type === 'multi'
+            ? (stats.correctIndices || []).includes(i)
+            : i === stats.correctIndex;
+        return `<div class="stat-bar-wrapper">
         <div class="stat-bar ${statBarColors[i] || 'bar-red'}${isCorrect ? ' correct-bar' : ''}" style="height: ${Math.max(heightPct, 8)}%">
           ${count}
         </div>
         <div class="stat-label">${shapes[i] || ''} ${currentQuestionData.choices[i] || ''}</div>
       </div>`;
-    }).join('');
+      })
+      .join('');
 
     const answered = stats.counts.reduce((a, b) => a + b, 0);
     document.getElementById('stats-total').textContent = `${answered} / ${stats.total} reponses`;
@@ -871,15 +1181,17 @@ socket.on('game:leaderboard', ({ rankings }) => {
 });
 
 function renderAdminLeaderboard(rankings) {
-  document.getElementById('admin-rankings').innerHTML = rankings.map((r, i) => {
-    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    return `<div class="leaderboard-row" style="animation-delay: ${i * 0.08}s">
+  document.getElementById('admin-rankings').innerHTML = rankings
+    .map((r, i) => {
+      const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      return `<div class="leaderboard-row" style="animation-delay: ${i * 0.08}s">
       <div class="avatar" style="background:${r.avatar?.color || '#666'}">${r.avatar?.icon || '👤'}</div>
       <div class="rank ${rankClass}">${r.rank}</div>
       <div class="name">${r.nickname}${r.streak > 1 ? `<span class="streak-badge">🔥${r.streak}</span>` : ''}</div>
       <div class="score">${r.score}</div>
     </div>`;
-  }).join('');
+    })
+    .join('');
 }
 
 // Reactions display
@@ -899,7 +1211,7 @@ document.getElementById('next-question-btn').addEventListener('click', () => {
 
 // ========== PAUSE ==========
 
-window.togglePause = function() {
+window.togglePause = function () {
   socket.emit('admin:toggle-pause', { pin: currentPin });
 };
 
@@ -1004,15 +1316,22 @@ function renderDashboard(data) {
       <div class="dashboard-card-icon">📊</div>
       <div class="dashboard-card-label">Taux de reussite par question</div>
       <div class="dashboard-breakdown">
-        ${data.perQuestion.map((pq, i) => {
-          const barWidth = Math.max(pq.correctPct, 5);
-          const barColor = pq.correctPct >= 70 ? 'var(--green)' : pq.correctPct >= 40 ? 'var(--yellow)' : 'var(--red)';
-          return `<div class="breakdown-row">
+        ${data.perQuestion
+          .map((pq, i) => {
+            const barWidth = Math.max(pq.correctPct, 5);
+            const barColor =
+              pq.correctPct >= 70
+                ? 'var(--green)'
+                : pq.correctPct >= 40
+                  ? 'var(--yellow)'
+                  : 'var(--red)';
+            return `<div class="breakdown-row">
             <span class="breakdown-label">Q${i + 1}</span>
             <div class="breakdown-bar-bg"><div class="breakdown-bar" style="width:${barWidth}%;background:${barColor};"></div></div>
             <span class="breakdown-pct">${pq.correctPct}%</span>
           </div>`;
-        }).join('')}
+          })
+          .join('')}
       </div>
     </div>`;
   }
@@ -1026,28 +1345,32 @@ function renderAdminPodium(podium) {
   const classes = ['second', 'first', 'third'];
   const medals = ['🥈', '🥇', '🥉'];
 
-  el.innerHTML = order.map((idx, i) => {
-    const p = podium[idx];
-    if (!p) return '';
-    return `<div class="podium-place">
+  el.innerHTML = order
+    .map((idx, i) => {
+      const p = podium[idx];
+      if (!p) return '';
+      return `<div class="podium-place">
       <div class="podium-avatar">${p.avatar?.icon || '👤'}</div>
       <div class="podium-name">${p.nickname}</div>
       <div class="podium-score">${p.score} pts</div>
       <div class="podium-block ${classes[i]}">${medals[i]}</div>
     </div>`;
-  }).join('');
+    })
+    .join('');
 }
 
 function renderAdminFinalRankings(rankings) {
-  document.getElementById('admin-final-rankings').innerHTML = rankings.map((r, i) => {
-    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    return `<div class="leaderboard-row" style="animation-delay: ${i * 0.06}s">
+  document.getElementById('admin-final-rankings').innerHTML = rankings
+    .map((r, i) => {
+      const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+      return `<div class="leaderboard-row" style="animation-delay: ${i * 0.06}s">
       <div class="avatar" style="background:${r.avatar?.color || '#666'}">${r.avatar?.icon || '👤'}</div>
       <div class="rank ${rankClass}">${r.rank}</div>
       <div class="name">${r.nickname}</div>
       <div class="score">${r.score}</div>
     </div>`;
-  }).join('');
+    })
+    .join('');
 }
 
 // ========== SHARE RESULTS ==========
@@ -1059,7 +1382,7 @@ document.getElementById('share-btn').addEventListener('click', async () => {
   try {
     if (typeof html2canvas !== 'undefined') {
       const c = await html2canvas(el, { backgroundColor: '#46178f', scale: 2 });
-      c.toBlob(blob => {
+      c.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

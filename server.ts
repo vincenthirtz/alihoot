@@ -235,124 +235,153 @@ io.on('connection', (socket: RateLimitedSocket) => {
         choices?: string[];
         items?: string[];
         acceptedAnswers?: string[];
+        video?: string;
+        sliderMin?: number;
+        sliderMax?: number;
+        sliderStep?: number;
+        correctValue?: number;
+        tolerance?: number;
+        unit?: string;
       }>;
       shuffleQuestions?: boolean;
       shuffleChoices?: boolean;
-    }) => requireSocketAdmin(socket, () => {
-      if (!title || !questions || !questions.length) {
-        socket.emit('admin:error', { message: 'Donnees invalides' });
-        return;
-      }
-
-      for (let i = 0; i < questions.length; i++) {
-        const q = questions[i];
-        if (!q.text) {
-          socket.emit('admin:error', { message: `Question ${i + 1} : intitule manquant` });
+    }) =>
+      requireSocketAdmin(socket, () => {
+        if (!title || !questions || !questions.length) {
+          socket.emit('admin:error', { message: 'Donnees invalides' });
           return;
         }
-        if (q.type === 'ordering') {
-          const validItems = (q.items || []).filter((item) => item && item.trim());
-          if (validItems.length < 2) {
-            socket.emit('admin:error', {
-              message: `Question ${i + 1} : il faut au moins 2 elements`,
-            });
+
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          if (!q.text) {
+            socket.emit('admin:error', { message: `Question ${i + 1} : intitule manquant` });
             return;
           }
-        } else if (q.type === 'freetext') {
-          if (!q.acceptedAnswers || !q.acceptedAnswers.length) {
-            socket.emit('admin:error', {
-              message: `Question ${i + 1} : reponses acceptees manquantes`,
-            });
-            return;
-          }
-        } else if (q.type === 'truefalse') {
-          // OK, no choices needed
-        } else {
-          const validChoices = (q.choices || []).filter((c) => c && c.trim());
-          if (validChoices.length < 2) {
-            socket.emit('admin:error', {
-              message: `Question ${i + 1} : il faut au moins 2 reponses`,
-            });
-            return;
+          if (q.type === 'slider') {
+            if (q.correctValue == null) {
+              socket.emit('admin:error', {
+                message: `Question ${i + 1} : valeur correcte manquante`,
+              });
+              return;
+            }
+          } else if (q.type === 'ordering') {
+            const validItems = (q.items || []).filter((item) => item && item.trim());
+            if (validItems.length < 2) {
+              socket.emit('admin:error', {
+                message: `Question ${i + 1} : il faut au moins 2 elements`,
+              });
+              return;
+            }
+          } else if (q.type === 'freetext') {
+            if (!q.acceptedAnswers || !q.acceptedAnswers.length) {
+              socket.emit('admin:error', {
+                message: `Question ${i + 1} : reponses acceptees manquantes`,
+              });
+              return;
+            }
+          } else if (q.type === 'truefalse') {
+            // OK, no choices needed
+          } else {
+            const validChoices = (q.choices || []).filter((c) => c && c.trim());
+            if (validChoices.length < 2) {
+              socket.emit('admin:error', {
+                message: `Question ${i + 1} : il faut au moins 2 reponses`,
+              });
+              return;
+            }
           }
         }
-      }
 
-      const result = store.createQuiz(title, questions, {
-        shuffleQuestions: !!shuffleQuestions,
-        shuffleChoices: !!shuffleChoices,
-      });
-      if (typeof result === 'object' && 'error' in result) {
-        socket.emit('admin:error', { message: result.error });
+        const result = store.createQuiz(title, questions, {
+          shuffleQuestions: !!shuffleQuestions,
+          shuffleChoices: !!shuffleChoices,
+        });
+        if (typeof result === 'object' && 'error' in result) {
+          socket.emit('admin:error', { message: result.error });
+          return;
+        }
+        socket.emit('admin:quiz-created', { quizId: result });
+      }),
+  );
+
+  socket.on('admin:create-room', ({ quizId }: { quizId: string }) =>
+    requireSocketAdmin(socket, () => {
+      const room = store.createRoom(quizId, socket.id);
+      if (!room) {
+        socket.emit('admin:error', { message: 'Quiz introuvable' });
         return;
       }
-      socket.emit('admin:quiz-created', { quizId: result });
+      socket.join(`room:${room.pin}`);
+      socket.emit('admin:room-created', { pin: room.pin, adminToken: room.adminToken });
+      console.log(`Room created: ${room.pin} by ${socket.id}`);
     }),
   );
 
-  socket.on('admin:create-room', ({ quizId }: { quizId: string }) => requireSocketAdmin(socket, () => {
-    const room = store.createRoom(quizId, socket.id);
-    if (!room) {
-      socket.emit('admin:error', { message: 'Quiz introuvable' });
-      return;
-    }
-    socket.join(`room:${room.pin}`);
-    socket.emit('admin:room-created', { pin: room.pin, adminToken: room.adminToken });
-    console.log(`Room created: ${room.pin} by ${socket.id}`);
-  }));
+  socket.on('admin:reconnect', ({ pin, adminToken }: { pin: string; adminToken: string }) =>
+    requireSocketAdmin(socket, () => {
+      const room = store.reconnectAdmin(pin, adminToken, socket.id);
+      if (!room) {
+        socket.emit('admin:error', { message: 'Reconnexion impossible' });
+        return;
+      }
+      socket.join(`room:${pin}`);
+      socket.emit('admin:reconnected', {
+        pin,
+        state: room.state,
+        players: store.getPlayerList(pin),
+        currentQuestionIndex: room.currentQuestionIndex,
+        quiz: store.getQuiz(room.quizId),
+      });
+      console.log(`Admin reconnected to room ${pin}`);
+    }),
+  );
 
-  socket.on('admin:reconnect', ({ pin, adminToken }: { pin: string; adminToken: string }) => requireSocketAdmin(socket, () => {
-    const room = store.reconnectAdmin(pin, adminToken, socket.id);
-    if (!room) {
-      socket.emit('admin:error', { message: 'Reconnexion impossible' });
-      return;
-    }
-    socket.join(`room:${pin}`);
-    socket.emit('admin:reconnected', {
-      pin,
-      state: room.state,
-      players: store.getPlayerList(pin),
-      currentQuestionIndex: room.currentQuestionIndex,
-      quiz: store.getQuiz(room.quizId),
-    });
-    console.log(`Admin reconnected to room ${pin}`);
-  }));
+  socket.on('admin:start-game', ({ pin }: { pin: string }) =>
+    requireSocketAdmin(socket, () => {
+      const room = store.getRoom(pin);
+      if (!room || room.adminSocketId !== socket.id) return;
+      if (store.getPlayerCount(pin) === 0) return;
 
-  socket.on('admin:start-game', ({ pin }: { pin: string }) => requireSocketAdmin(socket, () => {
-    const room = store.getRoom(pin);
-    if (!room || room.adminSocketId !== socket.id) return;
-    if (store.getPlayerCount(pin) === 0) return;
+      game.startGame(pin, io);
+      console.log(`Game started: ${pin}`);
+    }),
+  );
 
-    game.startGame(pin, io);
-    console.log(`Game started: ${pin}`);
-  }));
+  socket.on('admin:show-leaderboard', ({ pin }: { pin: string }) =>
+    requireSocketAdmin(socket, () => {
+      const room = store.getRoom(pin);
+      if (!room || room.adminSocketId !== socket.id) return;
+      game.showLeaderboard(pin, io);
+    }),
+  );
 
-  socket.on('admin:show-leaderboard', ({ pin }: { pin: string }) => requireSocketAdmin(socket, () => {
-    const room = store.getRoom(pin);
-    if (!room || room.adminSocketId !== socket.id) return;
-    game.showLeaderboard(pin, io);
-  }));
+  socket.on('admin:next-question', ({ pin }: { pin: string }) =>
+    requireSocketAdmin(socket, () => {
+      const room = store.getRoom(pin);
+      if (!room || room.adminSocketId !== socket.id) return;
+      game.nextQuestion(pin, io);
+    }),
+  );
 
-  socket.on('admin:next-question', ({ pin }: { pin: string }) => requireSocketAdmin(socket, () => {
-    const room = store.getRoom(pin);
-    if (!room || room.adminSocketId !== socket.id) return;
-    game.nextQuestion(pin, io);
-  }));
+  socket.on('admin:toggle-pause', ({ pin }: { pin: string }) =>
+    requireSocketAdmin(socket, () => {
+      const room = store.getRoom(pin);
+      if (!room || room.adminSocketId !== socket.id) return;
+      game.togglePause(pin, io);
+    }),
+  );
 
-  socket.on('admin:toggle-pause', ({ pin }: { pin: string }) => requireSocketAdmin(socket, () => {
-    const room = store.getRoom(pin);
-    if (!room || room.adminSocketId !== socket.id) return;
-    game.togglePause(pin, io);
-  }));
-
-  socket.on('admin:kick', ({ pin, nickname }: { pin: string; nickname: string }) => requireSocketAdmin(socket, () => {
-    const result = store.kickPlayer(pin, socket.id, nickname);
-    if (result) {
-      io.to(result.socketId).emit('player:kicked');
-      io.to(`room:${pin}`).emit('room:player-joined', { players: result.players });
-      console.log(`Kicked ${nickname} from room ${pin}`);
-    }
-  }));
+  socket.on('admin:kick', ({ pin, nickname }: { pin: string; nickname: string }) =>
+    requireSocketAdmin(socket, () => {
+      const result = store.kickPlayer(pin, socket.id, nickname);
+      if (result) {
+        io.to(result.socketId).emit('player:kicked');
+        io.to(`room:${pin}`).emit('room:player-joined', { players: result.players });
+        console.log(`Kicked ${nickname} from room ${pin}`);
+      }
+    }),
+  );
 
   // ========== PLAYER EVENTS ==========
 
@@ -402,28 +431,25 @@ io.on('connection', (socket: RateLimitedSocket) => {
       }),
   );
 
-  socket.on(
-    'player:reconnect',
-    ({ pin, fingerprint }: { pin: string; fingerprint: string }) => {
-      const result = store.reconnectPlayer(pin, socket.id, fingerprint);
-      if (result.error) {
-        socket.emit('player:error', { message: result.error });
-        return;
-      }
+  socket.on('player:reconnect', ({ pin, fingerprint }: { pin: string; fingerprint: string }) => {
+    const result = store.reconnectPlayer(pin, socket.id, fingerprint);
+    if (result.error) {
+      socket.emit('player:error', { message: result.error });
+      return;
+    }
 
-      socket.join(`room:${pin}`);
-      socket.emit('player:reconnected', {
-        pin,
-        nickname: result.nickname,
-        avatar: result.avatar,
-        state: result.state,
-      });
-      io.to(`room:${pin}`).emit('room:player-joined', {
-        players: store.getPlayerList(pin),
-      });
-      console.log(`Player reconnected: ${result.nickname} -> room ${pin}`);
-    },
-  );
+    socket.join(`room:${pin}`);
+    socket.emit('player:reconnected', {
+      pin,
+      nickname: result.nickname,
+      avatar: result.avatar,
+      state: result.state,
+    });
+    io.to(`room:${pin}`).emit('room:player-joined', {
+      players: store.getPlayerList(pin),
+    });
+    console.log(`Player reconnected: ${result.nickname} -> room ${pin}`);
+  });
 
   socket.on(
     'player:answer',

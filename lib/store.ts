@@ -22,15 +22,7 @@ export const LIMITS = {
   MAX_ROOMS: 100,
 } as const;
 import * as db from './db';
-import {
-  Quiz,
-  Question,
-  Room,
-  Avatar,
-  LeaderboardEntry,
-  AnswerResult,
-  Reaction,
-} from './types';
+import { Quiz, Question, Room, Avatar, LeaderboardEntry, AnswerResult, Reaction } from './types';
 
 interface RawQuestionInput {
   text: string;
@@ -38,12 +30,19 @@ interface RawQuestionInput {
   timeLimit?: number;
   pointsMultiplier?: number;
   image?: string;
+  video?: string;
   explanation?: string;
   choices?: string[];
   correctIndex?: number;
   correctIndices?: number[];
   acceptedAnswers?: string[];
   items?: string[];
+  sliderMin?: number;
+  sliderMax?: number;
+  sliderStep?: number;
+  correctValue?: number;
+  tolerance?: number;
+  unit?: string;
 }
 
 export const quizzes: Record<string, Quiz> = {};
@@ -71,7 +70,7 @@ export function createQuiz(
     shuffleChoices: !!options.shuffleChoices,
     questions: questions.slice(0, LIMITS.MAX_QUESTIONS).map((q) => {
       const type = q.type || 'mcq';
-      const validTypes = ['mcq', 'truefalse', 'multi', 'freetext', 'ordering'];
+      const validTypes = ['mcq', 'truefalse', 'multi', 'freetext', 'ordering', 'slider'];
       const safeType = validTypes.includes(type) ? type : 'mcq';
 
       const base = {
@@ -80,11 +79,28 @@ export function createQuiz(
         timeLimit: Math.min(Math.max(Number(q.timeLimit) || 20, 5), 120),
         pointsMultiplier: Math.min(Math.max(Number(q.pointsMultiplier) || 1, 1), 3),
         image: q.image ? sanitizeUrl(q.image) : null,
+        video: q.video ? sanitizeUrl(q.video) : null,
         explanation: q.explanation ? sanitize(q.explanation, LIMITS.MAX_EXPLANATION_LENGTH) : null,
         choices: [] as string[],
       };
 
-      if (safeType === 'ordering') {
+      if (safeType === 'slider') {
+        const sMin = Number(q.sliderMin) || 0;
+        const sMax = Number(q.sliderMax) || 100;
+        const sStep = Math.max(Number(q.sliderStep) || 1, 0.1);
+        const correctVal = Number(q.correctValue) || 0;
+        const tol = Math.max(Number(q.tolerance) || 0, 0);
+        return {
+          ...base,
+          type: 'slider' as const,
+          sliderMin: sMin,
+          sliderMax: sMax,
+          sliderStep: sStep,
+          correctValue: correctVal,
+          tolerance: tol,
+          unit: sanitize(q.unit || '', 20),
+        };
+      } else if (safeType === 'ordering') {
         const items = (q.items || [])
           .slice(0, LIMITS.MAX_ITEMS)
           .map((i) => sanitize(i, LIMITS.MAX_CHOICE_LENGTH))
@@ -262,7 +278,7 @@ export function addPlayer(
 ): AddPlayerResult {
   const room = rooms[pin];
   if (!room) return { error: 'Room introuvable' };
-  if (room.training) return { error: 'Session d\'entrainement privee' };
+  if (room.training) return { error: "Session d'entrainement privee" };
 
   if (room.state !== 'lobby') {
     if (fingerprint) {
@@ -405,7 +421,10 @@ export function recordAnswer(
   }
 
   let correct = false; // eslint-disable-line no-useless-assignment
-  if (question.type === 'ordering') {
+  if (question.type === 'slider') {
+    const playerVal = Number(mappedAnswer);
+    correct = Math.abs(playerVal - question.correctValue) <= question.tolerance;
+  } else if (question.type === 'ordering') {
     correct = JSON.stringify(mappedAnswer) === JSON.stringify(question.correctOrder);
   } else if (question.type === 'multi') {
     const sorted1 = [...((mappedAnswer as number[]) || [])].sort();
@@ -437,7 +456,11 @@ export function recordAnswer(
   room.answeredCount++;
 
   const result: AnswerResult = { correct, points };
-  if (question.type === 'ordering') {
+  if (question.type === 'slider') {
+    result.correctValue = question.correctValue;
+    result.tolerance = question.tolerance;
+    result.unit = question.unit;
+  } else if (question.type === 'ordering') {
     result.correctOrder = question.correctOrder;
   } else if (question.type === 'multi') {
     result.correctIndices = question._shuffledCorrectIndices || question.correctIndices;
@@ -515,6 +538,32 @@ export function getAnswerStats(pin: string, questionIndex: number): any {
 
   const quiz = quizzes[room.quizId];
   const question = quiz.questions[questionIndex];
+
+  if (question.type === 'slider') {
+    const answers: number[] = [];
+    let correctCount = 0;
+    let totalAnswered = 0;
+    Object.values(room.players).forEach((p) => {
+      const a = p.answers.find((ans) => ans.questionIndex === questionIndex);
+      if (a) {
+        totalAnswered++;
+        answers.push(Number(a.answerIndex));
+        if (a.correct) correctCount++;
+      }
+    });
+    return {
+      type: 'slider',
+      correctValue: question.correctValue,
+      tolerance: question.tolerance,
+      unit: question.unit,
+      sliderMin: question.sliderMin,
+      sliderMax: question.sliderMax,
+      answers,
+      correctCount,
+      totalAnswered,
+      total: Object.keys(room.players).length,
+    };
+  }
 
   if (question.type === 'ordering') {
     let correctCount = 0;

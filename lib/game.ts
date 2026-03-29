@@ -43,11 +43,7 @@ function broadcastQuestion(pin: string, io: Server): void {
   room.state = 'question';
 
   let choices = question.choices;
-  if (
-    quiz.shuffleChoices &&
-    question.type !== 'truefalse' &&
-    question.type !== 'freetext'
-  ) {
+  if (quiz.shuffleChoices && question.type !== 'truefalse' && question.type !== 'freetext') {
     const indices = question.choices.map((_, i) => i);
     const shuffled = shuffleArray(indices);
     choices = shuffled.map((i) => question.choices[i]);
@@ -66,9 +62,23 @@ function broadcastQuestion(pin: string, io: Server): void {
 
   let orderingItems: { item: string; originalIndex: number }[] | null = null;
   if (question.type === 'ordering') {
-    orderingItems = shuffleArray(
-      question.items.map((item, i) => ({ item, originalIndex: i })),
-    );
+    orderingItems = shuffleArray(question.items.map((item, i) => ({ item, originalIndex: i })));
+  }
+
+  // Slider data
+  let sliderData: {
+    sliderMin: number;
+    sliderMax: number;
+    sliderStep: number;
+    unit: string;
+  } | null = null;
+  if (question.type === 'slider') {
+    sliderData = {
+      sliderMin: question.sliderMin,
+      sliderMax: question.sliderMax,
+      sliderStep: question.sliderStep,
+      unit: question.unit,
+    };
   }
 
   const payload = {
@@ -79,9 +89,11 @@ function broadcastQuestion(pin: string, io: Server): void {
     total: quiz.questions.length,
     type: question.type,
     image: question.image || null,
+    video: question.video || null,
     pointsMultiplier: question.pointsMultiplier || 1,
     orderingItems: orderingItems ? orderingItems.map((o) => o.item) : null,
     orderingMap: orderingItems ? orderingItems.map((o) => o.originalIndex) : null,
+    slider: sliderData,
   };
 
   io.to(`room:${pin}`).emit('game:question', payload);
