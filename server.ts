@@ -38,12 +38,29 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
-app.get('/admin', (_req, res) => {
+app.get('/admin', async (req, res) => {
+  if (adminAuthEnabled) {
+    const token = req.query.token as string | undefined;
+    if (!token) return res.redirect('/admin/login');
+    const user = await db.verifyToken(token);
+    if (!user) return res.redirect('/admin/login');
+  }
   res.sendFile(path.join(PUBLIC_DIR, 'admin.html'));
 });
 
-app.get('/admin/history', (_req, res) => {
+app.get('/admin/history', async (req, res) => {
+  if (adminAuthEnabled) {
+    const token = req.query.token as string | undefined;
+    if (!token) return res.redirect('/admin/login');
+    const user = await db.verifyToken(token);
+    if (!user) return res.redirect('/admin/login');
+  }
   res.sendFile(path.join(PUBLIC_DIR, 'history.html'));
+});
+
+app.get('/admin/login', (_req, res) => {
+  if (!adminAuthEnabled) return res.redirect('/admin');
+  res.sendFile(path.join(PUBLIC_DIR, 'login.html'));
 });
 
 // ========== HEALTH CHECK ==========

@@ -14,10 +14,17 @@ const AdminAuth = (() => {
       authRequired = config.required;
 
       if (!authRequired) {
-        // No auth needed — show admin directly
         showAdmin();
         socketAuth();
         return;
+      }
+
+      // Extract token from URL (set by login page redirect)
+      const urlToken = new URLSearchParams(window.location.search).get('token');
+      if (urlToken) {
+        currentToken = urlToken;
+        // Clean URL without reload
+        window.history.replaceState({}, '', window.location.pathname);
       }
 
       if (!config.supabaseUrl || !config.supabaseAnonKey) {
@@ -28,67 +35,44 @@ const AdminAuth = (() => {
 
       supabaseClient = supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
 
-      // Check existing session
-      const { data: { session } } = await supabaseClient.auth.getSession();
-      if (session) {
-        currentToken = session.access_token;
+      // Check existing session or URL token
+      if (!currentToken) {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+          currentToken = session.access_token;
+        }
+      }
+
+      if (currentToken) {
         showAdmin();
         socketAuth();
+
+        // Listen for token refresh
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+          if (session) currentToken = session.access_token;
+        });
         return;
       }
 
-      // Listen for auth state changes (token refresh)
-      supabaseClient.auth.onAuthStateChange((_event, session) => {
-        if (session) {
-          currentToken = session.access_token;
-        } else {
-          currentToken = null;
-        }
-      });
-
-      // Show login screen
-      showLogin();
+      // No token — redirect to login
+      window.location.href = '/admin/login';
     } catch (e) {
       console.error('Auth init error:', e);
       showAdmin();
     }
   }
 
-  function showLogin() {
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('login-screen').classList.add('active');
-    document.getElementById('create-screen').classList.remove('active');
-  }
-
   function showAdmin() {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('login-screen').classList.remove('active');
-    document.getElementById('create-screen').classList.add('active');
+    const createScreen = document.getElementById('create-screen');
+    if (createScreen) createScreen.classList.add('active');
   }
 
   function socketAuth() {
     if (typeof socket !== 'undefined' && currentToken) {
       socket.emit('admin:auth', { token: currentToken });
     } else if (typeof socket !== 'undefined') {
-      // No auth required, just signal
       socket.emit('admin:auth', { token: '' });
     }
-  }
-
-  async function login(email, password) {
-    if (!supabaseClient) return { error: 'Auth non configuree' };
-
-    const { data, error } = await supabaseClient.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) return { error: error.message };
-
-    currentToken = data.session.access_token;
-    showAdmin();
-    socketAuth();
-    return { ok: true };
   }
 
   async function logout() {
@@ -96,7 +80,7 @@ const AdminAuth = (() => {
       await supabaseClient.auth.signOut();
     }
     currentToken = null;
-    showLogin();
+    window.location.href = '/admin/login';
   }
 
   function getToken() {
@@ -116,45 +100,9 @@ const AdminAuth = (() => {
     return fetch(url, { ...options, headers });
   }
 
-  return { init, login, logout, getToken, isRequired, authFetch };
+  return { init, logout, getToken, isRequired, authFetch };
 })();
 
-// Setup login form
 document.addEventListener('DOMContentLoaded', () => {
-  const loginBtn = document.getElementById('login-btn');
-  const loginEmail = document.getElementById('login-email');
-  const loginPassword = document.getElementById('login-password');
-  const loginError = document.getElementById('login-error');
-
-  if (loginBtn) {
-    loginBtn.addEventListener('click', async () => {
-      const email = loginEmail.value.trim();
-      const password = loginPassword.value;
-
-      if (!email || !password) {
-        loginError.textContent = 'Email et mot de passe requis';
-        return;
-      }
-
-      loginBtn.disabled = true;
-      loginError.textContent = '';
-
-      const result = await AdminAuth.login(email, password);
-
-      if (result.error) {
-        loginError.textContent = result.error;
-        loginBtn.disabled = false;
-      }
-    });
-
-    loginPassword.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') loginBtn.click();
-    });
-
-    loginEmail.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') loginPassword.focus();
-    });
-  }
-
   AdminAuth.init();
 });

@@ -127,8 +127,6 @@
   <script src="/js/auth.js"></script>
   <script>
     async function loadHistory() {
-      // Wait for auth to init
-      await new Promise(r => setTimeout(r, 500));
       const container = document.getElementById('history-list');
       try {
         const res = await AdminAuth.authFetch('/api/history');
@@ -177,7 +175,10 @@
       }
     }
 
-    loadHistory();
+    // Wait for auth init, then load
+    document.addEventListener('DOMContentLoaded', () => {
+      setTimeout(loadHistory, 300);
+    });
   </script>
 </body>
 </html>
