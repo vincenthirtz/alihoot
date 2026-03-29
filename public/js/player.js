@@ -34,12 +34,40 @@ const screens = {
   podium: document.getElementById('podium-screen')
 };
 
+let _transitioning = false;
+
 function showScreen(name) {
-  Object.values(screens).forEach(s => s.classList.remove('active'));
-  screens[name].classList.add('active');
+  const current = Object.values(screens).find(s => s.classList.contains('active'));
+  const next = screens[name];
+  if (!next || current === next) return;
+
+  if (current && !_transitioning) {
+    _transitioning = true;
+    current.classList.add('screen-exit');
+    current.addEventListener('animationend', () => {
+      current.classList.remove('active', 'screen-exit');
+      next.classList.add('active');
+      _transitioning = false;
+      // Focus management for accessibility
+      const focusTarget = next.querySelector('input:not([style*="display:none"]):not([style*="display: none"]), button:not([style*="display:none"]):not([style*="display: none"])');
+      if (focusTarget) focusTarget.focus({ preventScroll: true });
+    }, { once: true });
+  } else {
+    if (current) current.classList.remove('active', 'screen-exit');
+    next.classList.add('active');
+    _transitioning = false;
+  }
 
   if (name === 'waiting' && isTraining) {
     document.getElementById('waiting-subtext').textContent = 'Resultats dans quelques secondes...';
+  }
+}
+
+// ========== HAPTIC FEEDBACK ==========
+
+function vibrate(pattern) {
+  if (navigator.vibrate) {
+    navigator.vibrate(pattern);
   }
 }
 
@@ -225,9 +253,11 @@ socket.on('game:starting', ({ countdown }) => {
   let count = countdown;
   numEl.textContent = count;
 
+  vibrate(200);
   const interval = setInterval(() => {
     count--;
     AudioSystem.play('countdown');
+    vibrate(100);
     if (count <= 0) {
       clearInterval(interval);
       overlay.style.display = 'none';
@@ -314,8 +344,8 @@ socket.on('game:question', ({ questionIndex, text, choices, timeLimit, total, ty
     grid.style.display = 'grid';
     grid.className = 'answer-grid cols-1';
     grid.innerHTML = `
-      <button class="answer-btn btn-green" data-index="0"><span class="shape">✅</span><span class="text">Vrai</span></button>
-      <button class="answer-btn btn-red" data-index="1"><span class="shape">❌</span><span class="text">Faux</span></button>`;
+      <button class="answer-btn btn-green" data-index="0" aria-label="Repondre Vrai"><span class="shape">✅</span><span class="text">Vrai</span></button>
+      <button class="answer-btn btn-red" data-index="1" aria-label="Repondre Faux"><span class="shape">❌</span><span class="text">Faux</span></button>`;
     attachAnswerListeners();
   } else if (type === 'multi') {
     grid.style.display = 'grid';
@@ -324,7 +354,7 @@ socket.on('game:question', ({ questionIndex, text, choices, timeLimit, total, ty
     multiSubmit.style.display = 'block';
     multiSubmit.disabled = false;
     grid.innerHTML = choices.map((c, i) =>
-      `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}">
+      `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}" aria-label="Reponse ${i+1}: ${c}" aria-pressed="false">
         <span class="shape">${shapeIcons[i] || ''}</span><span class="text">${c}</span>
       </button>`
     ).join('');
@@ -333,7 +363,7 @@ socket.on('game:question', ({ questionIndex, text, choices, timeLimit, total, ty
     grid.style.display = 'grid';
     grid.className = 'answer-grid';
     grid.innerHTML = choices.map((c, i) =>
-      `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}">
+      `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}" aria-label="Reponse ${i+1}: ${c}">
         <span class="shape">${shapeIcons[i] || ''}</span><span class="text">${c}</span>
       </button>`
     ).join('');
@@ -360,6 +390,7 @@ function attachAnswerListeners() {
       answered = true;
       const idx = parseInt(btn.dataset.index);
       AudioSystem.play('click');
+      vibrate(30);
 
       document.querySelectorAll('#answer-grid .answer-btn').forEach(b => {
         if (b === btn) b.classList.add('selected');
@@ -383,9 +414,11 @@ function attachMultiListeners() {
       if (selectedMulti.includes(idx)) {
         selectedMulti = selectedMulti.filter(i => i !== idx);
         btn.classList.remove('selected');
+        btn.setAttribute('aria-pressed', 'false');
       } else {
         selectedMulti.push(idx);
         btn.classList.add('selected');
+        btn.setAttribute('aria-pressed', 'true');
       }
     });
   });
@@ -566,12 +599,14 @@ socket.on('game:answer-result', ({ correct, points, rank, totalPlayers, totalSco
     text.textContent = 'Bonne reponse !';
     text.className = 'result-text result-correct';
     pts.textContent = `+${points} points`;
+    vibrate(100); // Short buzz for correct
   } else {
     icon.textContent = '✗';
     icon.className = 'success-icon result-wrong';
     text.textContent = 'Mauvaise reponse';
     text.className = 'result-text result-wrong';
     pts.textContent = '0 points';
+    vibrate([50, 50, 50]); // Triple pulse for wrong
   }
 
   // Show real-time rank

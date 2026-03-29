@@ -1,0 +1,22 @@
+{
+  "name": "Alihoot! - Quiz en temps reel",
+  "short_name": "Alihoot!",
+  "description": "Jeu de quiz interactif en temps reel",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#46178f",
+  "theme_color": "#46178f",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icons/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

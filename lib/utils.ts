@@ -17,15 +17,32 @@ export function generateToken(): string {
   return crypto.randomBytes(16).toString('hex');
 }
 
-export function sanitize(str: string): string {
+export function sanitize(str: string, maxLength = 500): string {
   if (typeof str !== 'string') return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-    .trim();
+  return (
+    str
+      // Remove null bytes and control characters (except newlines/tabs)
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      // HTML entity encoding
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+      .replace(/\//g, '&#x2F;')
+      .replace(/\\/g, '&#x5C;')
+      .trim()
+      .slice(0, maxLength)
+  );
+}
+
+// Validate URL format (only http/https)
+export function sanitizeUrl(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim();
+  if (!/^https?:\/\/.+/i.test(trimmed)) return null;
+  return sanitize(trimmed, 2000);
 }
 
 const AVATAR_ICONS = [

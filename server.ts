@@ -9,14 +9,26 @@ import * as db from './lib/db';
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+
+// CORS configuration
+const ALLOWED_ORIGINS = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+  : undefined; // undefined = allow all (dev mode)
+
+const io = new Server(server, {
+  cors: {
+    origin: ALLOWED_ORIGINS || true,
+    methods: ['GET', 'POST'],
+  },
+  maxHttpBufferSize: 1e6, // 1MB max payload
+});
 
 // Resolve root directory (works from both src and dist/)
 const ROOT_DIR = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 
-// JSON body parser for API routes
-app.use(express.json());
+// JSON body parser with size limit
+app.use(express.json({ limit: '1mb' }));
 
 // Serve static files
 app.use(express.static(PUBLIC_DIR));
@@ -183,11 +195,15 @@ io.on('connection', (socket: RateLimitedSocket) => {
         }
       }
 
-      const quizId = store.createQuiz(title, questions, {
+      const result = store.createQuiz(title, questions, {
         shuffleQuestions: !!shuffleQuestions,
         shuffleChoices: !!shuffleChoices,
       });
-      socket.emit('admin:quiz-created', { quizId });
+      if (typeof result === 'object' && 'error' in result) {
+        socket.emit('admin:error', { message: result.error });
+        return;
+      }
+      socket.emit('admin:quiz-created', { quizId: result });
     },
   );
 

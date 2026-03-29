@@ -1,4 +1,26 @@
-import { generatePin, generateId, generateToken, sanitize, generateAvatar } from './utils';
+import {
+  generatePin,
+  generateId,
+  generateToken,
+  sanitize,
+  sanitizeUrl,
+  generateAvatar,
+} from './utils';
+
+// ========== LIMITS ==========
+
+export const LIMITS = {
+  MAX_QUESTIONS: 50,
+  MAX_CHOICES: 8,
+  MAX_ITEMS: 10,
+  MAX_ACCEPTED_ANSWERS: 20,
+  MAX_TITLE_LENGTH: 100,
+  MAX_QUESTION_TEXT_LENGTH: 300,
+  MAX_CHOICE_LENGTH: 150,
+  MAX_EXPLANATION_LENGTH: 500,
+  MAX_NICKNAME_LENGTH: 20,
+  MAX_ROOMS: 100,
+} as const;
 import * as db from './db';
 import {
   Quiz,
@@ -31,61 +53,83 @@ export function createQuiz(
   title: string,
   questions: RawQuestionInput[],
   options: { shuffleQuestions?: boolean; shuffleChoices?: boolean } = {},
-): string {
+): string | { error: string } {
+  // Validate limits
+  if (!title || typeof title !== 'string') return { error: 'Titre manquant' };
+  if (!questions || !Array.isArray(questions) || questions.length === 0) {
+    return { error: 'Au moins une question requise' };
+  }
+  if (questions.length > LIMITS.MAX_QUESTIONS) {
+    return { error: `Maximum ${LIMITS.MAX_QUESTIONS} questions par quiz` };
+  }
+
   const id = generateId();
   quizzes[id] = {
     id,
-    title: sanitize(title),
+    title: sanitize(title, LIMITS.MAX_TITLE_LENGTH),
     shuffleQuestions: !!options.shuffleQuestions,
     shuffleChoices: !!options.shuffleChoices,
-    questions: questions.map((q) => {
+    questions: questions.slice(0, LIMITS.MAX_QUESTIONS).map((q) => {
       const type = q.type || 'mcq';
+      const validTypes = ['mcq', 'truefalse', 'multi', 'freetext', 'ordering'];
+      const safeType = validTypes.includes(type) ? type : 'mcq';
+
       const base = {
-        text: sanitize(q.text),
-        type: type as Question['type'],
+        text: sanitize(q.text, LIMITS.MAX_QUESTION_TEXT_LENGTH),
+        type: safeType as Question['type'],
         timeLimit: Math.min(Math.max(Number(q.timeLimit) || 20, 5), 120),
         pointsMultiplier: Math.min(Math.max(Number(q.pointsMultiplier) || 1, 1), 3),
-        image: q.image ? sanitize(q.image) : null,
-        explanation: q.explanation ? sanitize(q.explanation) : null,
+        image: q.image ? sanitizeUrl(q.image) : null,
+        explanation: q.explanation ? sanitize(q.explanation, LIMITS.MAX_EXPLANATION_LENGTH) : null,
         choices: [] as string[],
       };
 
-      if (type === 'ordering') {
-        const items = (q.items || []).map((i) => sanitize(i)).filter((i) => i);
+      if (safeType === 'ordering') {
+        const items = (q.items || [])
+          .slice(0, LIMITS.MAX_ITEMS)
+          .map((i) => sanitize(i, LIMITS.MAX_CHOICE_LENGTH))
+          .filter((i) => i);
         return {
           ...base,
           type: 'ordering' as const,
           items,
           correctOrder: items.map((_, i) => i),
         };
-      } else if (type === 'truefalse') {
+      } else if (safeType === 'truefalse') {
         return {
           ...base,
           type: 'truefalse' as const,
           choices: ['Vrai', 'Faux'],
           correctIndex: q.correctIndex === 1 ? 1 : 0,
         };
-      } else if (type === 'freetext') {
+      } else if (safeType === 'freetext') {
         return {
           ...base,
           type: 'freetext' as const,
-          acceptedAnswers: (q.acceptedAnswers || []).map((a) => sanitize(a).toLowerCase()),
+          acceptedAnswers: (q.acceptedAnswers || [])
+            .slice(0, LIMITS.MAX_ACCEPTED_ANSWERS)
+            .map((a) => sanitize(a, LIMITS.MAX_CHOICE_LENGTH).toLowerCase()),
         };
-      } else if (type === 'multi') {
+      } else if (safeType === 'multi') {
         return {
           ...base,
           type: 'multi' as const,
-          choices: (q.choices || []).map((c) => sanitize(c)),
-          correctIndices: q.correctIndices || [],
+          choices: (q.choices || [])
+            .slice(0, LIMITS.MAX_CHOICES)
+            .map((c) => sanitize(c, LIMITS.MAX_CHOICE_LENGTH)),
+          correctIndices: (q.correctIndices || []).filter(
+            (i) => typeof i === 'number' && i >= 0 && i < LIMITS.MAX_CHOICES,
+          ),
         };
       } else {
         return {
           ...base,
           type: 'mcq' as const,
           choices: (q.choices || [])
-            .map((c) => sanitize(c))
+            .slice(0, LIMITS.MAX_CHOICES)
+            .map((c) => sanitize(c, LIMITS.MAX_CHOICE_LENGTH))
             .filter((c) => c),
-          correctIndex: Number(q.correctIndex),
+          correctIndex: Math.max(0, Math.min(Number(q.correctIndex) || 0, LIMITS.MAX_CHOICES - 1)),
         };
       }
     }) as Question[],
@@ -102,6 +146,7 @@ export function createQuiz(
 export function createRoom(quizId: string, adminSocketId: string): Room | null {
   const quiz = quizzes[quizId];
   if (!quiz) return null;
+  if (Object.keys(rooms).length >= LIMITS.MAX_ROOMS) return null;
 
   const pin = generatePin(new Set(Object.keys(rooms)));
   const adminToken = generateToken();
@@ -227,8 +272,8 @@ export function addPlayer(
     return addSpectator(pin, socketId, nickname, customAvatar);
   }
 
-  const cleanNick = sanitize(nickname);
-  if (!cleanNick || cleanNick.length > 20) return { error: 'Pseudo invalide (1-20 caracteres)' };
+  const cleanNick = sanitize(nickname, LIMITS.MAX_NICKNAME_LENGTH);
+  if (!cleanNick) return { error: `Pseudo invalide (1-${LIMITS.MAX_NICKNAME_LENGTH} caracteres)` };
 
   const nickTaken = Object.values(room.players).some(
     (p) => p.nickname.toLowerCase() === cleanNick.toLowerCase() && p.connected,
@@ -421,6 +466,9 @@ export function addReaction(
   socketId: string,
   emoji: string,
 ): { nickname: string; emoji: string; avatar: Avatar } | null {
+  const ALLOWED_EMOJIS = ['👏', '🔥', '😂', '😱', '💪'];
+  if (!emoji || !ALLOWED_EMOJIS.includes(emoji)) return null;
+
   const room = rooms[pin];
   if (!room) return null;
   const player = room.players[socketId];
