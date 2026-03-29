@@ -28,16 +28,19 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 
 // CORS for API routes (frontend may be on a different domain)
-app.use((_req, res, next) => {
-  const origin = _req.headers.origin;
-  if (!ALLOWED_ORIGINS || (origin && ALLOWED_ORIGINS.includes(origin))) {
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (ALLOWED_ORIGINS) {
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+    }
+  } else {
     res.header('Access-Control-Allow-Origin', origin || '*');
-  } else if (!ALLOWED_ORIGINS) {
-    res.header('Access-Control-Allow-Origin', '*');
   }
   res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (_req.method === 'OPTIONS') return res.sendStatus(204);
+  res.header('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
