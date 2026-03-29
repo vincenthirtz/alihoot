@@ -224,10 +224,25 @@
       <div class="kicked-text">Tu as ete expulse</div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="/js/confetti.js"></script>
-    <script src="/js/audio.js"></script>
-    <script src="/js/player.js"></script>
+    <script>
+      // Load socket.io from backend in production, locally from server
+      (function () {
+        var s = document.createElement('script');
+        s.src =
+          location.hostname === 'localhost'
+            ? '/socket.io/socket.io.js'
+            : 'https://alihoot.onrender.com/socket.io/socket.io.js';
+        s.onload = function () {
+          // Load app scripts after socket.io is ready
+          ['confetti', 'audio', 'player'].forEach(function (name) {
+            var sc = document.createElement('script');
+            sc.src = '/js/' + name + '.js';
+            document.body.appendChild(sc);
+          });
+        };
+        document.body.appendChild(s);
+      })();
+    </script>
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(() => {});

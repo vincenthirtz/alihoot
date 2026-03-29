@@ -1,4 +1,5 @@
-const socket = io();
+const BACKEND_URL = window.location.hostname === 'localhost' ? '' : 'https://alihoot.onrender.com';
+const socket = io(BACKEND_URL || undefined);
 
 // State
 let currentPin = null;
@@ -1091,7 +1092,7 @@ document.getElementById('training-btn').addEventListener('click', async () => {
   error.textContent = '';
 
   try {
-    const res = await fetch('/api/quizzes');
+    const res = await fetch(BACKEND_URL + '/api/quizzes');
     const quizzes = await res.json();
 
     // Also include local quizzes

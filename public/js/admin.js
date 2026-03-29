@@ -1,4 +1,5 @@
-const socket = io();
+const BACKEND_URL = window.location.hostname === 'localhost' ? '' : 'https://alihoot.onrender.com';
+const socket = io(BACKEND_URL || undefined);
 
 // State
 let currentPin = null;
@@ -126,7 +127,7 @@ renderSavedQuizzes();
 
 async function loadCloudQuizzes() {
   try {
-    const res = await fetch('/api/quizzes');
+    const res = await fetch(BACKEND_URL + '/api/quizzes');
     const quizzes = await res.json();
     const section = document.getElementById('cloud-quizzes-section');
     const list = document.getElementById('cloud-quiz-list');
@@ -157,7 +158,7 @@ async function loadCloudQuizzes() {
 
 window.loadCloudQuiz = async function (id) {
   try {
-    const res = await fetch(`/api/quizzes/${id}`);
+    const res = await fetch(`${BACKEND_URL}/api/quizzes/${id}`);
     const quiz = await res.json();
     if (!quiz || !quiz.questions) return;
 

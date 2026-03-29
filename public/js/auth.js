@@ -2,13 +2,15 @@
 // Handles Supabase authentication for admin pages
 
 const AdminAuth = (() => {
+  const BACKEND_URL =
+    window.location.hostname === 'localhost' ? '' : 'https://alihoot.onrender.com';
   let supabaseClient = null;
   let authRequired = false;
   let currentToken = null;
 
   async function init() {
     try {
-      const res = await fetch('/api/auth/config');
+      const res = await fetch(BACKEND_URL + '/api/auth/config');
       const config = await res.json();
 
       authRequired = config.required;
@@ -37,7 +39,9 @@ const AdminAuth = (() => {
 
       // Check existing session or URL token
       if (!currentToken) {
-        const { data: { session } } = await supabaseClient.auth.getSession();
+        const {
+          data: { session },
+        } = await supabaseClient.auth.getSession();
         if (session) {
           currentToken = session.access_token;
         }
@@ -97,7 +101,8 @@ const AdminAuth = (() => {
     if (currentToken) {
       headers['Authorization'] = `Bearer ${currentToken}`;
     }
-    return fetch(url, { ...options, headers });
+    const fullUrl = url.startsWith('http') ? url : BACKEND_URL + url;
+    return fetch(fullUrl, { ...options, headers });
   }
 
   return { init, logout, getToken, isRequired, authFetch };
