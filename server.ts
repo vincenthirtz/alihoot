@@ -256,14 +256,14 @@ io.on('connection', (socket: RateLimitedSocket) => {
     }) =>
       requireSocketAdmin(socket, () => {
         if (!title || !questions || !questions.length) {
-          socket.emit('admin:error', { message: 'Donnees invalides' });
+          socket.emit('admin:error', { message: 'Données invalides' });
           return;
         }
 
         for (let i = 0; i < questions.length; i++) {
           const q = questions[i];
           if (!q.text) {
-            socket.emit('admin:error', { message: `Question ${i + 1} : intitule manquant` });
+            socket.emit('admin:error', { message: `Question ${i + 1} : intitulé manquant` });
             return;
           }
           if (q.type === 'slider') {
@@ -277,14 +277,14 @@ io.on('connection', (socket: RateLimitedSocket) => {
             const validItems = (q.items || []).filter((item) => item && item.trim());
             if (validItems.length < 2) {
               socket.emit('admin:error', {
-                message: `Question ${i + 1} : il faut au moins 2 elements`,
+                message: `Question ${i + 1} : il faut au moins 2 éléments`,
               });
               return;
             }
           } else if (q.type === 'freetext') {
             if (!q.acceptedAnswers || !q.acceptedAnswers.length) {
               socket.emit('admin:error', {
-                message: `Question ${i + 1} : reponses acceptees manquantes`,
+                message: `Question ${i + 1} : réponses acceptées manquantes`,
               });
               return;
             }
@@ -294,7 +294,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
             const validChoices = (q.choices || []).filter((c) => c && c.trim());
             if (validChoices.length < 2) {
               socket.emit('admin:error', {
-                message: `Question ${i + 1} : il faut au moins 2 reponses`,
+                message: `Question ${i + 1} : il faut au moins 2 réponses`,
               });
               return;
             }

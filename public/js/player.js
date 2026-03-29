@@ -73,7 +73,7 @@ function showScreen(name) {
   }
 
   if (name === 'waiting' && isTraining) {
-    document.getElementById('waiting-subtext').textContent = 'Resultats dans quelques secondes...';
+    document.getElementById('waiting-subtext').textContent = 'Résultats dans quelques secondes...';
   }
 }
 
@@ -107,10 +107,10 @@ function setConnectionStatus(status) {
     // Auto-hide after 3s when connected
     connectionIndicator.classList.add('auto-hide');
   } else if (status === 'reconnecting') {
-    connectionText.textContent = 'Reconnexion...';
+    connectionText.textContent = 'Reconnexion…';
     connectionIndicator.classList.remove('auto-hide');
   } else {
-    connectionText.textContent = 'Deconnecte';
+    connectionText.textContent = 'Déconnecté';
     connectionIndicator.classList.remove('auto-hide');
   }
 }
@@ -463,6 +463,13 @@ socket.on(
     const sliderContainer = document.getElementById('slider-container');
     const sliderSubmit = document.getElementById('slider-submit');
 
+    // Clean up previous reveal elements
+    document
+      .querySelectorAll(
+        '.freetext-correct-reveal, .slider-correct-reveal, .ordering-correct-reveal',
+      )
+      .forEach((el) => el.remove());
+
     freetextInput.style.display = 'none';
     freetextSubmit.style.display = 'none';
     multiHint.style.display = 'none';
@@ -519,7 +526,7 @@ socket.on(
       grid.innerHTML = choices
         .map(
           (c, i) =>
-            `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}" aria-label="Reponse ${i + 1}: ${c}" aria-pressed="false">
+            `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}" aria-label="Réponse ${i + 1}: ${c}" aria-pressed="false">
         <span class="shape">${shapeIcons[i] || ''}</span><span class="text">${c}</span>
       </button>`,
         )
@@ -531,7 +538,7 @@ socket.on(
       grid.innerHTML = choices
         .map(
           (c, i) =>
-            `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}" aria-label="Reponse ${i + 1}: ${c}">
+            `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}" aria-label="Réponse ${i + 1}: ${c}">
         <span class="shape">${shapeIcons[i] || ''}</span><span class="text">${c}</span>
       </button>`,
         )
@@ -854,7 +861,7 @@ function revealCorrectAnswers(result) {
     const unitStr = unit || '';
     const revealEl = document.createElement('div');
     revealEl.className = 'slider-correct-reveal';
-    revealEl.innerHTML = `<strong>Bonne reponse :</strong> ${correctValue}${tolStr} ${unitStr}`;
+    revealEl.innerHTML = `<strong>Bonne réponse :</strong> ${correctValue}${tolStr} ${unitStr}`;
     container.appendChild(revealEl);
     const sliderInput = document.getElementById('player-slider');
     if (sliderInput) sliderInput.disabled = true;
@@ -883,7 +890,7 @@ function revealCorrectAnswers(result) {
   } else if (currentQuestionType === 'freetext' && acceptedAnswers) {
     const correctText = document.createElement('div');
     correctText.className = 'freetext-correct-reveal';
-    correctText.innerHTML = '<strong>Reponses acceptees :</strong> ' + acceptedAnswers.join(', ');
+    correctText.innerHTML = '<strong>Réponses acceptées :</strong> ' + acceptedAnswers.join(', ');
     const freetextInput = document.getElementById('freetext-input');
     freetextInput.parentNode.insertBefore(correctText, freetextInput.nextSibling);
   } else if (currentQuestionType === 'ordering' && correctOrder) {
@@ -925,14 +932,14 @@ socket.on(
       if (correct) {
         icon.textContent = '✓';
         icon.className = 'success-icon result-correct';
-        text.textContent = 'Bonne reponse !';
+        text.textContent = 'Bonne réponse !';
         text.className = 'result-text result-correct';
         pts.textContent = `+${points} points`;
         vibrate(100);
       } else {
         icon.textContent = '✗';
         icon.className = 'success-icon result-wrong';
-        text.textContent = 'Mauvaise reponse';
+        text.textContent = 'Mauvaise réponse';
         text.className = 'result-text result-wrong';
         pts.textContent = '0 points';
         vibrate([50, 50, 50]);
@@ -1055,7 +1062,7 @@ function renderFinalLeaderboard(rankings) {
   if (me) {
     if (isTraining) {
       document.getElementById('your-position').textContent =
-        `Entrainement termine ! Score : ${me.score} pts`;
+        `Entraînement terminé ! Score : ${me.score} pts`;
     } else {
       document.getElementById('your-position').textContent =
         `Tu es ${me.rank}${me.rank === 1 ? 'er' : 'e'} sur ${rankings.length} joueurs !`;
@@ -1078,7 +1085,7 @@ socket.on('game:resumed', () => {
 socket.on('game:host-disconnected', () => {
   if (isTraining) return; // Training mode: we are the host
   document.getElementById('q-text') &&
-    (document.getElementById('q-text').textContent = "L'hote s'est deconnecte...");
+    (document.getElementById('q-text').textContent = "L'hôte s'est déconnecté...");
 });
 
 // ========== TRAINING MODE ==========

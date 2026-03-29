@@ -21,9 +21,9 @@
     </div>
 
     <!-- Connection indicator -->
-    <div class="connection-indicator connected" id="connection-indicator" title="Connecte">
+    <div class="connection-indicator connected" id="connection-indicator" title="Connecté">
       <span class="connection-dot"></span>
-      <span class="connection-text" id="connection-text">Connecte</span>
+      <span class="connection-text" id="connection-text">Connecté</span>
     </div>
 
     <!-- JOIN SCREEN -->
@@ -71,18 +71,18 @@
             class="btn"
             style="background: var(--purple, #9b59b6); color: white"
           >
-            S'entrainer seul
+            S'entraîner seul
           </button>
         </div>
       </div>
     </section>
 
     <!-- TRAINING QUIZ PICKER -->
-    <section id="training-screen" class="screen" role="main" aria-label="Mode entrainement">
+    <section id="training-screen" class="screen" role="main" aria-label="Mode entraînement">
       <div class="card">
-        <h2 class="logo-small">Mode Entrainement</h2>
+        <h2 class="logo-small">Mode Entraînement</h2>
         <p style="text-align: center; color: var(--card-label); margin-bottom: 15px">
-          Choisis un quiz pour t'entrainer
+          Choisis un quiz pour t'entraîner
         </p>
         <div id="training-quiz-list" style="max-height: 300px; overflow-y: auto"></div>
         <div id="training-error" class="error-msg"></div>
@@ -131,10 +131,10 @@
       <div class="question-text" id="q-text" role="heading" aria-level="2"></div>
 
       <!-- MCQ / TrueFalse answers -->
-      <div class="answer-grid" id="answer-grid" role="group" aria-label="Choix de reponse"></div>
+      <div class="answer-grid" id="answer-grid" role="group" aria-label="Choix de réponse"></div>
 
       <!-- Multi-select hint + submit -->
-      <div class="multi-hint" id="multi-hint" style="display: none">Coche plusieurs reponses</div>
+      <div class="multi-hint" id="multi-hint" style="display: none">Coche plusieurs réponses</div>
       <button class="btn btn-start multi-submit-btn" id="multi-submit" style="display: none">
         Valider
       </button>
@@ -152,14 +152,14 @@
       </button>
 
       <!-- Freetext input -->
-      <label for="freetext-input" class="sr-only">Ta reponse</label>
+      <label for="freetext-input" class="sr-only">Ta réponse</label>
       <input
         type="text"
         class="freetext-input"
         id="freetext-input"
-        placeholder="Ta reponse..."
+        placeholder="Ta réponse..."
         style="display: none"
-        aria-label="Saisir ta reponse"
+        aria-label="Saisir ta réponse"
       />
       <button class="freetext-submit-btn" id="freetext-submit" style="display: none">
         Envoyer
@@ -169,7 +169,7 @@
     <!-- WAITING SCREEN (after answering) -->
     <section id="waiting-screen" class="screen">
       <div class="spinner"></div>
-      <div class="waiting-text">Reponse envoyee !</div>
+      <div class="waiting-text">Réponse envoyée !</div>
       <div class="waiting-text" id="waiting-subtext" style="margin-top: 10px; opacity: 0.7">
         En attente des autres joueurs<span class="waiting-dots"></span>
       </div>
@@ -181,7 +181,7 @@
       class="screen"
       role="alert"
       aria-live="assertive"
-      aria-label="Resultat"
+      aria-label="Résultat"
     >
       <div class="success-icon" id="result-icon" aria-hidden="true"></div>
       <div class="result-text" id="result-text"></div>
@@ -194,7 +194,7 @@
     <section id="leaderboard-screen" class="screen" role="main" aria-label="Classement">
       <h2 class="leaderboard-title">Classement</h2>
       <div class="leaderboard" id="player-leaderboard"></div>
-      <div class="reactions-bar" id="player-reactions" role="group" aria-label="Reactions">
+      <div class="reactions-bar" id="player-reactions" role="group" aria-label="Réactions">
         <button class="reaction-btn" data-emoji="👏" aria-label="Applaudir">👏</button>
         <button class="reaction-btn" data-emoji="🔥" aria-label="Feu">🔥</button>
         <button class="reaction-btn" data-emoji="😂" aria-label="Rire">😂</button>
@@ -206,7 +206,7 @@
     <!-- PODIUM SCREEN -->
     <section id="podium-screen" class="screen">
       <canvas id="confetti-canvas"></canvas>
-      <div class="final-title">Resultats finaux !</div>
+      <div class="final-title">Résultats finaux !</div>
       <div class="podium-container" id="podium"></div>
       <div class="leaderboard" id="final-leaderboard" style="margin-top: 20px"></div>
       <div class="your-position" id="your-position"></div>
@@ -221,12 +221,11 @@
     <!-- KICKED OVERLAY -->
     <div class="kicked-overlay" id="kicked-overlay" style="display: none">
       <div class="kicked-icon">🚫</div>
-      <div class="kicked-text">Tu as ete expulse</div>
+      <div class="kicked-text">Tu as été expulsé</div>
     </div>
 
     <script>
-      var BACKEND_URL =
-        location.hostname === 'localhost' ? '' : 'https://alihoot.onrender.com';
+      var BACKEND_URL = location.hostname === 'localhost' ? '' : 'https://alihoot.onrender.com';
       var socketIOSrc = BACKEND_URL
         ? BACKEND_URL + '/socket.io/socket.io.js'
         : '/socket.io/socket.io.js';

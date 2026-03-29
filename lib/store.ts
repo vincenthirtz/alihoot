@@ -278,7 +278,7 @@ export function addPlayer(
 ): AddPlayerResult {
   const room = rooms[pin];
   if (!room) return { error: 'Room introuvable' };
-  if (room.training) return { error: "Session d'entrainement privee" };
+  if (room.training) return { error: "Session d'entraînement privée" };
 
   if (room.state !== 'lobby') {
     if (fingerprint) {
@@ -289,15 +289,15 @@ export function addPlayer(
   }
 
   const cleanNick = sanitize(nickname, LIMITS.MAX_NICKNAME_LENGTH);
-  if (!cleanNick) return { error: `Pseudo invalide (1-${LIMITS.MAX_NICKNAME_LENGTH} caracteres)` };
+  if (!cleanNick) return { error: `Pseudo invalide (1-${LIMITS.MAX_NICKNAME_LENGTH} caractères)` };
 
   const nickTaken = Object.values(room.players).some(
     (p) => p.nickname.toLowerCase() === cleanNick.toLowerCase() && p.connected,
   );
-  if (nickTaken) return { error: 'Ce pseudo est deja pris' };
+  if (nickTaken) return { error: 'Ce pseudo est déjà pris' };
 
   if (fingerprint && room.fingerprints.has(fingerprint)) {
-    return { error: 'Tu es deja connecte depuis un autre onglet' };
+    return { error: 'Tu es déjà connecté depuis un autre onglet' };
   }
   if (fingerprint) room.fingerprints.add(fingerprint);
 

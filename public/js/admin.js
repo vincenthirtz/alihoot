@@ -230,8 +230,8 @@ document.getElementById('import-quiz-input').addEventListener('change', (e) => {
 const questionTypes = {
   mcq: { label: 'QCM', icon: '🔘' },
   truefalse: { label: 'Vrai/Faux', icon: '✅' },
-  multi: { label: 'Multi-reponses', icon: '☑️' },
-  freetext: { label: 'Reponse libre', icon: '✏️' },
+  multi: { label: 'Multi-réponses', icon: '☑️' },
+  freetext: { label: 'Réponse libre', icon: '✏️' },
   ordering: { label: 'Classement', icon: '📊' },
   slider: { label: 'Curseur', icon: '🎚️' },
 };
@@ -272,13 +272,13 @@ function addQuestion(prefill = null) {
         )
         .join('')}
     </div>
-    <input type="text" class="q-text-input" placeholder="Intitule de la question..." maxlength="200" value="${prefill?.text || ''}">
+    <input type="text" class="q-text-input" placeholder="Intitulé de la question..." maxlength="200" value="${prefill?.text || ''}">
     <div class="media-inputs">
       <input type="text" class="image-input" placeholder="🖼️ URL de l'image (optionnel)" value="${prefill?.image || ''}">
       <input type="text" class="video-input" placeholder="🎬 URL de la video YouTube (optionnel)" value="${prefill?.video || ''}">
     </div>
     <div class="q-body"></div>
-    <input type="text" class="explanation-input" placeholder="💡 Explication (optionnel, affichee apres la reponse)" maxlength="300" value="${prefill?.explanation || ''}">
+    <input type="text" class="explanation-input" placeholder="💡 Explication (optionnel, affichée après la réponse)" maxlength="300" value="${prefill?.explanation || ''}">
     <div class="q-options-row">
       <div class="time-select">
         <label>Temps :</label>
@@ -335,7 +335,7 @@ function renderQuestionBody(block, type, prefill = null) {
         </div>
         <div class="slider-config-row">
           <div class="slider-field">
-            <label>Bonne reponse</label>
+            <label>Bonne réponse</label>
             <input type="number" class="slider-correct" value="${correctVal}" step="any">
           </div>
           <div class="slider-field">
@@ -347,7 +347,7 @@ function renderQuestionBody(block, type, prefill = null) {
             <input type="text" class="slider-unit" value="${unit}" maxlength="20" placeholder="kg, km, %...">
           </div>
         </div>
-        <small style="color:var(--card-label);">Le joueur voit un curseur de <b>${sMin}</b> a <b>${sMax}</b>. Reponse acceptee : <b>${correctVal} ± ${tol}</b>${unit ? ' ' + unit : ''}</small>
+        <small style="color:var(--card-label);">Le joueur voit un curseur de <b>${sMin}</b> a <b>${sMax}</b>. Réponse acceptée : <b>${correctVal} ± ${tol}</b>${unit ? ' ' + unit : ''}</small>
       </div>`;
   } else if (type === 'ordering') {
     const items = prefill?.items || ['', '', '', ''];
@@ -385,7 +385,7 @@ function renderQuestionBody(block, type, prefill = null) {
     const answers = prefill?.acceptedAnswers?.join(', ') || '';
     body.innerHTML = `
       <div class="freetext-answers">
-        <input type="text" placeholder="Reponses acceptees (separees par des virgules)" value="${answers}">
+        <input type="text" placeholder="Réponses acceptées (séparées par des virgules)" value="${answers}">
         <small>Ex: Paris, paris, PARIS</small>
       </div>`;
   } else if (type === 'multi') {
@@ -398,7 +398,7 @@ function renderQuestionBody(block, type, prefill = null) {
             (c, i) => `
           <div class="choice-item">
             <input type="checkbox" name="correct-${block.dataset.index}" value="${i}"${correctIndices.includes(i) ? ' checked' : ''}>
-            <input type="text" placeholder="Reponse ${i + 1}" maxlength="100" value="${c}">
+            <input type="text" placeholder="Réponse ${i + 1}" maxlength="100" value="${c}">
           </div>`,
           )
           .join('')}
@@ -418,7 +418,7 @@ function renderQuestionBody(block, type, prefill = null) {
             (c, i) => `
           <div class="choice-item">
             <input type="radio" name="correct-${block.dataset.index}" value="${i}"${i === correct ? ' checked' : ''}>
-            <input type="text" placeholder="Reponse ${i + 1}" maxlength="100" value="${c}">
+            <input type="text" placeholder="Réponse ${i + 1}" maxlength="100" value="${c}">
           </div>`,
           )
           .join('')}
@@ -466,7 +466,7 @@ window.addChoice = function (btn) {
   div.className = 'choice-item';
   div.innerHTML = `
     <input type="${inputType}" name="correct-${block.dataset.index}" value="${idx}">
-    <input type="text" placeholder="Reponse ${idx + 1}" maxlength="100" style="border-left: 3px solid ${colors[idx] || '#999'};">
+    <input type="text" placeholder="Réponse ${idx + 1}" maxlength="100" style="border-left: 3px solid ${colors[idx] || '#999'};">
   `;
   grid.appendChild(div);
 };
@@ -660,7 +660,7 @@ function renderPreview() {
       <div class="answer-btn btn-red"><span class="shape">❌</span><span class="text">Faux</span></div>
     </div>`;
   } else if (q.type === 'freetext') {
-    answersHtml = `<div style="text-align:center; opacity:0.7; font-weight:700; padding:20px;">✏️ Champ de reponse libre</div>`;
+    answersHtml = `<div style="text-align:center; opacity:0.7; font-weight:700; padding:20px;">✏️ Champ de réponse libre</div>`;
   } else {
     const choices = q.choices || [];
     answersHtml = `<div class="answer-grid" style="pointer-events:none;">
@@ -729,7 +729,7 @@ document.getElementById('create-quiz-btn').addEventListener('click', () => {
     const pointsMultiplier = parseInt(block.querySelector('.points-select-input').value) || 1;
 
     if (!text) {
-      errorEl.textContent = `Question ${i + 1} : intitule manquant`;
+      errorEl.textContent = `Question ${i + 1} : intitulé manquant`;
       valid = false;
       return;
     }
@@ -776,7 +776,7 @@ document.getElementById('create-quiz-btn').addEventListener('click', () => {
         .map((a) => a.trim())
         .filter((a) => a);
       if (answers.length === 0) {
-        errorEl.textContent = `Question ${i + 1} : reponses acceptees manquantes`;
+        errorEl.textContent = `Question ${i + 1} : réponses acceptées manquantes`;
         valid = false;
         return;
       }
@@ -787,12 +787,12 @@ document.getElementById('create-quiz-btn').addEventListener('click', () => {
       q.choices = Array.from(choiceInputs).map((c) => c.value.trim());
       q.correctIndices = Array.from(checkboxes).map((c) => parseInt(c.value));
       if (q.choices.filter((c) => c).length < 2) {
-        errorEl.textContent = `Question ${i + 1} : min 2 reponses`;
+        errorEl.textContent = `Question ${i + 1} : min 2 réponses`;
         valid = false;
         return;
       }
       if (q.correctIndices.length === 0) {
-        errorEl.textContent = `Question ${i + 1} : coche au moins une bonne reponse`;
+        errorEl.textContent = `Question ${i + 1} : coche au moins une bonne réponse`;
         valid = false;
         return;
       }
@@ -802,7 +802,7 @@ document.getElementById('create-quiz-btn').addEventListener('click', () => {
       q.choices = Array.from(choiceInputs).map((c) => c.value.trim());
       q.correctIndex = radio ? parseInt(radio.value) : 0;
       if (q.choices.filter((c) => c).length < 2) {
-        errorEl.textContent = `Question ${i + 1} : min 2 reponses`;
+        errorEl.textContent = `Question ${i + 1} : min 2 réponses`;
         valid = false;
         return;
       }
@@ -993,7 +993,7 @@ socket.on(
       `Question ${questionIndex + 1} / ${total}${multiplierBadge}`;
     document.getElementById('admin-q-text').textContent = text;
     document.getElementById('admin-timer').textContent = timeLimit;
-    document.getElementById('admin-answer-count').textContent = '0 reponses';
+    document.getElementById('admin-answer-count').textContent = '0 réponses';
 
     // Progress bar
     const progressBar = document.getElementById('admin-progress-bar');
@@ -1052,7 +1052,7 @@ socket.on(
       <div class="answer-btn btn-red"><span class="shape">❌</span><span class="text">Faux</span></div>`;
     } else if (type === 'freetext') {
       grid.className = 'answer-grid cols-1';
-      grid.innerHTML = `<div style="text-align:center;font-weight:700;opacity:0.7;font-size:1.2rem;">✏️ Reponse libre</div>`;
+      grid.innerHTML = `<div style="text-align:center;font-weight:700;opacity:0.7;font-size:1.2rem;">✏️ Réponse libre</div>`;
     } else {
       grid.className = 'answer-grid';
       grid.innerHTML = choices
@@ -1073,7 +1073,7 @@ socket.on('game:timer-tick', ({ remaining }) => {
 });
 
 socket.on('game:answer-count', ({ answered, total }) => {
-  document.getElementById('admin-answer-count').textContent = `${answered} / ${total} reponses`;
+  document.getElementById('admin-answer-count').textContent = `${answered} / ${total} réponses`;
 });
 
 // ========== STATS ==========
@@ -1095,7 +1095,7 @@ socket.on('game:answer-stats', (stats) => {
     const tolMax = stats.correctValue + stats.tolerance;
     freetextEl.innerHTML = `
       <div style="text-align:center; width:100%;">
-        <div style="font-size:1.3rem; font-weight:800; margin-bottom:10px;">🎚️ Bonne reponse : ${stats.correctValue}${unit}${stats.tolerance > 0 ? ` (± ${stats.tolerance})` : ''}</div>
+        <div style="font-size:1.3rem; font-weight:800; margin-bottom:10px;">🎚️ Bonne réponse : ${stats.correctValue}${unit}${stats.tolerance > 0 ? ` (± ${stats.tolerance})` : ''}</div>
         <div class="slider-stats-bar">
           <div class="slider-stats-track">
             <div class="slider-stats-zone" style="left:${((tolMin - stats.sliderMin) / (stats.sliderMax - stats.sliderMin)) * 100}%;width:${((tolMax - tolMin) / (stats.sliderMax - stats.sliderMin)) * 100}%"></div>
@@ -1112,7 +1112,7 @@ socket.on('game:answer-stats', (stats) => {
         <div style="margin-top:15px; font-weight:700;">Moyenne : ${avg}${unit} — ${stats.correctCount} / ${stats.totalAnswered} dans la zone</div>
       </div>`;
     document.getElementById('stats-total').textContent =
-      `${stats.totalAnswered} / ${stats.total} reponses`;
+      `${stats.totalAnswered} / ${stats.total} réponses`;
   } else if (stats.type === 'ordering') {
     barsEl.style.display = 'none';
     freetextEl.style.display = 'flex';
@@ -1120,10 +1120,10 @@ socket.on('game:answer-stats', (stats) => {
       <div style="text-align:center; width:100%;">
         <div style="font-size:1.3rem; font-weight:800; margin-bottom:10px;">📊 Bon ordre :</div>
         ${stats.items.map((item, i) => `<div style="padding:6px 0; font-weight:600;">${i + 1}. ${item}</div>`).join('')}
-        <div style="margin-top:15px; font-weight:700;">${stats.correctCount} / ${stats.totalAnswered} ont trouve le bon ordre</div>
+        <div style="margin-top:15px; font-weight:700;">${stats.correctCount} / ${stats.totalAnswered} ont trouvé le bon ordre</div>
       </div>`;
     document.getElementById('stats-total').textContent =
-      `${stats.totalAnswered} / ${stats.total} reponses`;
+      `${stats.totalAnswered} / ${stats.total} réponses`;
   } else if (stats.type === 'freetext') {
     barsEl.style.display = 'none';
     freetextEl.style.display = 'flex';
@@ -1157,7 +1157,7 @@ socket.on('game:answer-stats', (stats) => {
       .join('');
 
     const answered = stats.counts.reduce((a, b) => a + b, 0);
-    document.getElementById('stats-total').textContent = `${answered} / ${stats.total} reponses`;
+    document.getElementById('stats-total').textContent = `${answered} / ${stats.total} réponses`;
   }
 
   // Show explanation if present
@@ -1258,9 +1258,9 @@ function renderDashboard(data) {
   if (data.hardestQuestion) {
     html += `<div class="dashboard-card">
       <div class="dashboard-card-icon">💀</div>
-      <div class="dashboard-card-label">Question la plus ratee</div>
+      <div class="dashboard-card-label">Question la plus ratée</div>
       <div class="dashboard-card-value">${data.hardestQuestion.text}</div>
-      <div class="dashboard-card-detail">${data.hardestQuestion.correctPct}% de bonnes reponses</div>
+      <div class="dashboard-card-detail">${data.hardestQuestion.correctPct}% de bonnes réponses</div>
     </div>`;
   }
 
@@ -1268,9 +1268,9 @@ function renderDashboard(data) {
   if (data.easiestQuestion) {
     html += `<div class="dashboard-card">
       <div class="dashboard-card-icon">🎯</div>
-      <div class="dashboard-card-label">Question la plus reussie</div>
+      <div class="dashboard-card-label">Question la plus réussie</div>
       <div class="dashboard-card-value">${data.easiestQuestion.text}</div>
-      <div class="dashboard-card-detail">${data.easiestQuestion.correctPct}% de bonnes reponses</div>
+      <div class="dashboard-card-detail">${data.easiestQuestion.correctPct}% de bonnes réponses</div>
     </div>`;
   }
 
@@ -1278,7 +1278,7 @@ function renderDashboard(data) {
   if (data.avgResponseTime != null) {
     html += `<div class="dashboard-card">
       <div class="dashboard-card-icon">⏱️</div>
-      <div class="dashboard-card-label">Temps moyen de reponse</div>
+      <div class="dashboard-card-label">Temps moyen de réponse</div>
       <div class="dashboard-card-value">${data.avgResponseTime}s</div>
     </div>`;
   }
@@ -1297,8 +1297,8 @@ function renderDashboard(data) {
   if (data.bestStreak) {
     html += `<div class="dashboard-card">
       <div class="dashboard-card-icon">🔥</div>
-      <div class="dashboard-card-label">Meilleure serie</div>
-      <div class="dashboard-card-value">${data.bestStreak.count} d'affilee</div>
+      <div class="dashboard-card-label">Meilleure série</div>
+      <div class="dashboard-card-value">${data.bestStreak.count} d'affilée</div>
       <div class="dashboard-card-detail">par ${data.bestStreak.nickname}</div>
     </div>`;
   }
@@ -1307,7 +1307,7 @@ function renderDashboard(data) {
   if (data.totalCorrect != null) {
     html += `<div class="dashboard-card">
       <div class="dashboard-card-icon">✅</div>
-      <div class="dashboard-card-label">Bonnes reponses totales</div>
+      <div class="dashboard-card-label">Bonnes réponses totales</div>
       <div class="dashboard-card-value">${data.totalCorrect} / ${data.totalAnswers}</div>
       <div class="dashboard-card-detail">${data.totalCorrectPct}% global</div>
     </div>`;
@@ -1317,7 +1317,7 @@ function renderDashboard(data) {
   if (data.perQuestion && data.perQuestion.length > 0) {
     html += `<div class="dashboard-card dashboard-card-wide">
       <div class="dashboard-card-icon">📊</div>
-      <div class="dashboard-card-label">Taux de reussite par question</div>
+      <div class="dashboard-card-label">Taux de réussite par question</div>
       <div class="dashboard-breakdown">
         ${data.perQuestion
           .map((pq, i) => {
