@@ -157,6 +157,281 @@ export async function getGameHistory(limit = 50) {
   }
 }
 
+// ========== PLAYERS ==========
+
+export async function registerPlayer(
+  email: string,
+  nickname: string,
+  avatar: { icon: string; color: string },
+): Promise<{ id: number; email: string; nickname: string; avatar: object } | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  try {
+    // Try to find existing player by email
+    const existing = await findPlayerByEmail(email);
+    if (existing) {
+      // Update nickname/avatar and last_seen
+      const { data, error } = await client
+        .from('players')
+        .update({ nickname, avatar, last_seen: new Date().toISOString() })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) {
+        console.error('DB updatePlayer error:', error.message);
+        return existing;
+      }
+      return data;
+    }
+
+    // Create new player
+    const { data, error } = await client
+      .from('players')
+      .insert({ email, nickname, avatar })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('DB registerPlayer error:', error.message);
+      return null;
+    }
+    return data;
+  } catch (e) {
+    console.error('DB registerPlayer exception:', (e as Error).message);
+    return null;
+  }
+}
+
+export async function findPlayerByEmail(
+  email: string,
+): Promise<{ id: number; email: string; nickname: string; avatar: object; games_played: number; total_score: number; best_streak: number } | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  try {
+    const { data, error } = await client
+      .from('players')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export async function updatePlayerStats(
+  playerId: number,
+  score: number,
+  streak: number,
+): Promise<void> {
+  const client = getClient();
+  if (!client) return;
+
+  try {
+    const player = await client
+      .from('players')
+      .select('games_played, total_score, best_streak')
+      .eq('id', playerId)
+      .single();
+
+    if (player.error || !player.data) return;
+
+    await client
+      .from('players')
+      .update({
+        games_played: player.data.games_played + 1,
+        total_score: player.data.total_score + score,
+        best_streak: Math.max(player.data.best_streak, streak),
+        last_seen: new Date().toISOString(),
+      })
+      .eq('id', playerId);
+  } catch (e) {
+    console.error('DB updatePlayerStats exception:', (e as Error).message);
+  }
+}
+
+// ========== LEADERBOARD ==========
+
+export async function getLeaderboard(
+  period: 'week' | 'month' | 'all' = 'all',
+  limit = 50,
+): Promise<Array<{ id: number; nickname: string; avatar: object; games_played: number; total_score: number; best_streak: number }>> {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    let query = client
+      .from('players')
+      .select('id, nickname, avatar, games_played, total_score, best_streak, created_at')
+      .gt('games_played', 0)
+      .order('total_score', { ascending: false })
+      .limit(limit);
+
+    if (period === 'week') {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      query = query.gte('last_seen', weekAgo);
+    } else if (period === 'month') {
+      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      query = query.gte('last_seen', monthAgo);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('DB getLeaderboard error:', error.message);
+      return [];
+    }
+    return data || [];
+  } catch (e) {
+    console.error('DB getLeaderboard exception:', (e as Error).message);
+    return [];
+  }
+}
+
+// ========== PLAYER HISTORY ==========
+
+export async function getPlayerGames(
+  playerId: number,
+  limit = 50,
+): Promise<Array<{ id: number; quiz_title: string; pin: string; player_count: number; question_count: number; rankings: unknown; ended_at: string; player_score: number | null; player_rank: number | null }>> {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    const { data, error } = await client
+      .from('game_history')
+      .select('*')
+      .order('ended_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('DB getPlayerGames error:', error.message);
+      return [];
+    }
+
+    // Filter games where this player participated and extract their score/rank
+    const results: Array<{ id: number; quiz_title: string; pin: string; player_count: number; question_count: number; rankings: unknown; ended_at: string; player_score: number | null; player_rank: number | null }> = [];
+    for (const game of data || []) {
+      const rankings = (game.rankings || []) as Array<{ nickname: string; score: number; rank: number; playerId?: number }>;
+      const entry = rankings.find((r: { playerId?: number }) => r.playerId === playerId);
+      if (entry) {
+        results.push({
+          ...game,
+          player_score: entry.score,
+          player_rank: entry.rank,
+        });
+      }
+    }
+    return results;
+  } catch (e) {
+    console.error('DB getPlayerGames exception:', (e as Error).message);
+    return [];
+  }
+}
+
+export async function getPlayerProfile(
+  playerId: number,
+): Promise<{ player: object; achievements: Array<{ achievement_id: string; unlocked_at: string; title: string; description: string; icon: string; category: string }> } | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  try {
+    const { data: player, error: pErr } = await client
+      .from('players')
+      .select('*')
+      .eq('id', playerId)
+      .single();
+
+    if (pErr || !player) return null;
+
+    const { data: achievements, error: aErr } = await client
+      .from('player_achievements')
+      .select('achievement_id, unlocked_at, achievements(title, description, icon, category)')
+      .eq('player_id', playerId)
+      .order('unlocked_at', { ascending: false });
+
+    const flatAchievements = (achievements || []).map((a: Record<string, unknown>) => {
+      const ach = a.achievements as Record<string, string> | null;
+      return {
+        achievement_id: a.achievement_id as string,
+        unlocked_at: a.unlocked_at as string,
+        title: ach?.title || '',
+        description: ach?.description || '',
+        icon: ach?.icon || '',
+        category: ach?.category || '',
+      };
+    });
+
+    if (aErr) console.error('DB achievements error:', aErr.message);
+
+    return { player, achievements: flatAchievements };
+  } catch (e) {
+    console.error('DB getPlayerProfile exception:', (e as Error).message);
+    return null;
+  }
+}
+
+// ========== ACHIEVEMENTS ==========
+
+export async function getAchievements(): Promise<Array<{ id: string; title: string; description: string; icon: string; category: string }>> {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    const { data, error } = await client
+      .from('achievements')
+      .select('*')
+      .order('category');
+
+    if (error) return [];
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function awardAchievement(playerId: number, achievementId: string): Promise<boolean> {
+  const client = getClient();
+  if (!client) return false;
+
+  try {
+    const { error } = await client
+      .from('player_achievements')
+      .upsert(
+        { player_id: playerId, achievement_id: achievementId },
+        { onConflict: 'player_id,achievement_id' },
+      );
+
+    if (error) {
+      console.error('DB awardAchievement error:', error.message);
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getPlayerAchievementIds(playerId: number): Promise<string[]> {
+  const client = getClient();
+  if (!client) return [];
+
+  try {
+    const { data, error } = await client
+      .from('player_achievements')
+      .select('achievement_id')
+      .eq('player_id', playerId);
+
+    if (error) return [];
+    return (data || []).map((a: { achievement_id: string }) => a.achievement_id);
+  } catch {
+    return [];
+  }
+}
+
 // ========== AUTH ==========
 
 export async function verifyToken(token: string): Promise<{ id: string; email: string } | null> {

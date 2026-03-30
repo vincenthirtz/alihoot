@@ -255,6 +255,7 @@ export function createTrainingRoom(
     streak: 0,
     avatar,
     fingerprint: null,
+    playerId: null,
   };
 
   return rooms[pin];
@@ -291,6 +292,7 @@ export function addPlayer(
   nickname: string,
   fingerprint: string | null,
   customAvatar?: Avatar,
+  playerId?: number | null,
 ): AddPlayerResult {
   const room = rooms[pin];
   if (!room) return { error: 'Room introuvable' };
@@ -330,6 +332,7 @@ export function addPlayer(
     streak: 0,
     avatar,
     fingerprint: fingerprint || null,
+    playerId: playerId || null,
   };
 
   return { success: true, players: getPlayerList(pin), avatar };
@@ -544,6 +547,7 @@ export function getLeaderboard(pin: string): LeaderboardEntry[] {
       connected: p.connected,
       avatar: p.avatar,
       streak: p.streak,
+      playerId: p.playerId || null,
     }));
 }
 
@@ -685,6 +689,57 @@ export function saveGameHistory(pin: string): void {
     rankings,
     startedAt: room.gameStartedAt || new Date().toISOString(),
   }).catch(() => {});
+
+  // Update registered players stats + check achievements
+  for (const player of Object.values(room.players)) {
+    if (player.playerId) {
+      db.updatePlayerStats(player.playerId, player.score, player.streak).catch(() => {});
+      checkAchievements(player.playerId, player, rankings).catch(() => {});
+    }
+  }
+}
+
+async function checkAchievements(
+  playerId: number,
+  player: { score: number; streak: number; answers: { correct: boolean }[] },
+  rankings: LeaderboardEntry[],
+): Promise<void> {
+  const existing = await db.getPlayerAchievementIds(playerId);
+  const has = (id: string) => existing.includes(id);
+  const award = (id: string) => {
+    if (!has(id)) db.awardAchievement(playerId, id).catch(() => {});
+  };
+
+  // Fetch fresh stats (updatePlayerStats already ran)
+  const profile = await db.getPlayerProfile(playerId).catch(() => null);
+  const stats = profile?.player as { games_played: number; total_score: number; best_streak: number } | null;
+
+  if (!stats) return;
+
+  // Games played
+  if (stats.games_played >= 1) award('first_game');
+  if (stats.games_played >= 5) award('games_5');
+  if (stats.games_played >= 10) award('games_10');
+  if (stats.games_played >= 25) award('games_25');
+
+  // Streak (best ever, already updated in DB)
+  if (stats.best_streak >= 3) award('streak_3');
+  if (stats.best_streak >= 5) award('streak_5');
+  if (stats.best_streak >= 10) award('streak_10');
+
+  // Score this game
+  if (player.score >= 5000) award('score_5000');
+  if (player.score >= 10000) award('score_10000');
+
+  // Podium / victory
+  const playerRanking = rankings.find((r) => r.playerId === playerId);
+  if (playerRanking && playerRanking.rank <= 3) {
+    award('podium_1');
+    // Count total podiums from game history for podium_3
+  }
+  if (playerRanking && playerRanking.rank === 1) {
+    award('winner_1');
+  }
 }
 
 // ========== PLAYER RECONNECTION ==========

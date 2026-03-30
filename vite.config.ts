@@ -13,6 +13,8 @@ export default defineConfig({
         admin: resolve(__dirname, 'admin.html'),
         login: resolve(__dirname, 'login.html'),
         history: resolve(__dirname, 'history.html'),
+        leaderboard: resolve(__dirname, 'leaderboard.html'),
+        profile: resolve(__dirname, 'profile.html'),
       },
     },
   },

@@ -14,6 +14,7 @@ let currentQuestionType = 'mcq';
 let answered = false;
 let timerDuration = 20;
 let selectedMulti = [];
+let registeredPlayer = JSON.parse(localStorage.getItem('alihoot-player') || 'null');
 
 // Fingerprint for anti-cheat
 const fingerprint = (() => {
@@ -37,6 +38,7 @@ function extractYouTubeId(url) {
 
 // DOM
 const screens = {
+  register: document.getElementById('register-screen'),
   join: document.getElementById('join-screen'),
   training: document.getElementById('training-screen'),
   lobby: document.getElementById('lobby-screen'),
@@ -252,6 +254,110 @@ window.pickColor = function (btn, color) {
 
 renderAvatarPicker();
 
+// ========== REGISTRATION ==========
+
+function renderRegisterAvatarPicker() {
+  const preview = document.getElementById('register-avatar-preview');
+  preview.textContent = chosenIcon;
+  preview.style.background = chosenColor;
+
+  const emojiGrid = document.getElementById('register-emoji-grid');
+  emojiGrid.innerHTML = AVATAR_ICONS.map(
+    (icon) =>
+      `<button class="avatar-pick-btn${icon === chosenIcon ? ' active' : ''}" data-reg-icon="${icon}">${icon}</button>`,
+  ).join('');
+  emojiGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-reg-icon]');
+    if (!btn) return;
+    chosenIcon = btn.dataset.regIcon;
+    emojiGrid.querySelectorAll('.avatar-pick-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    preview.textContent = chosenIcon;
+    // Sync join screen picker
+    renderAvatarPicker();
+  });
+
+  const colorGrid = document.getElementById('register-color-grid');
+  colorGrid.innerHTML = AVATAR_COLORS.map(
+    (color) =>
+      `<button class="avatar-color-btn${color === chosenColor ? ' active' : ''}" style="background:${color}" data-reg-color="${color}"></button>`,
+  ).join('');
+  colorGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-reg-color]');
+    if (!btn) return;
+    chosenColor = btn.dataset.regColor;
+    colorGrid.querySelectorAll('.avatar-color-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    preview.style.background = chosenColor;
+    renderAvatarPicker();
+  });
+}
+
+// If already registered, skip to join screen
+if (registeredPlayer) {
+  chosenIcon = registeredPlayer.avatar?.icon || chosenIcon;
+  chosenColor = registeredPlayer.avatar?.color || chosenColor;
+  currentNickname = registeredPlayer.nickname;
+  renderAvatarPicker();
+  // Switch active screen: hide register, show join
+  screens.register.classList.remove('active');
+  screens.join.classList.add('active');
+  // Pre-fill nickname
+  document.getElementById('nickname-input').value = registeredPlayer.nickname;
+} else {
+  renderRegisterAvatarPicker();
+}
+
+const registerBtn = document.getElementById('register-btn');
+const registerError = document.getElementById('register-error');
+const registerEmail = document.getElementById('register-email');
+const registerNickname = document.getElementById('register-nickname');
+
+registerBtn.addEventListener('click', () => {
+  const email = registerEmail.value.trim().toLowerCase();
+  const nickname = registerNickname.value.trim();
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    registerError.textContent = 'Entre une adresse email valide';
+    return;
+  }
+  if (!nickname || nickname.length < 1) {
+    registerError.textContent = 'Entre un pseudo';
+    return;
+  }
+
+  registerError.textContent = '';
+  registerBtn.disabled = true;
+
+  socket.emit('player:register', {
+    email,
+    nickname,
+    avatar: { icon: chosenIcon, color: chosenColor },
+  });
+});
+
+registerEmail.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') registerNickname.focus();
+});
+registerNickname.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') registerBtn.click();
+});
+
+socket.on('player:registered', (data) => {
+  registeredPlayer = data;
+  localStorage.setItem('alihoot-player', JSON.stringify(data));
+  currentNickname = data.nickname;
+  document.getElementById('nickname-input').value = data.nickname;
+  renderAvatarPicker();
+  registerBtn.disabled = false;
+  showScreen('join');
+});
+
+socket.on('player:register-error', ({ message }) => {
+  registerError.textContent = message;
+  registerBtn.disabled = false;
+});
+
 // ========== JOIN ==========
 
 joinBtn.addEventListener('click', () => {
@@ -272,6 +378,7 @@ joinBtn.addEventListener('click', () => {
     nickname,
     fingerprint,
     avatar: { icon: chosenIcon, color: chosenColor },
+    playerId: registeredPlayer ? registeredPlayer.id : null,
   });
 });
 

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alihoot! - Classement</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/css/common.css" />
+    <style>
+      .lb-container { width: 100%; max-width: 700px; margin: 0 auto; padding: 20px; }
+      .lb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+      .lb-header h1 { font-size: 1.8rem; font-weight: 900; text-transform: uppercase; }
+      .lb-nav { display: flex; gap: 8px; }
+      .lb-nav a { color: rgba(255,255,255,0.7); text-decoration: none; font-weight: 700; font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.1); transition: all 0.2s; }
+      .lb-nav a:hover { background: rgba(255,255,255,0.2); color: white; }
+      .lb-filters { display: flex; gap: 8px; margin-bottom: 20px; }
+      .lb-filter-btn { padding: 8px 16px; border: 2px solid rgba(255,255,255,0.2); border-radius: 20px; background: transparent; color: white; font-weight: 700; font-size: 0.85rem; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+      .lb-filter-btn.active { background: var(--purple); border-color: var(--purple); }
+      .lb-filter-btn:hover { border-color: rgba(255,255,255,0.5); }
+      .lb-podium { display: flex; justify-content: center; align-items: flex-end; gap: 12px; margin-bottom: 30px; padding: 20px 0; }
+      .lb-podium-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+      .lb-podium-avatar { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; border: 3px solid rgba(255,255,255,0.3); }
+      .lb-podium-item:nth-child(2) .lb-podium-avatar { width: 72px; height: 72px; font-size: 2.2rem; border-color: #ffd700; }
+      .lb-podium-name { font-weight: 800; font-size: 0.85rem; max-width: 90px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .lb-podium-score { font-weight: 700; font-size: 0.75rem; opacity: 0.8; }
+      .lb-podium-medal { font-size: 1.4rem; }
+      .lb-row { display: flex; align-items: center; padding: 12px 16px; margin: 4px 0; background: rgba(255,255,255,0.08); border-radius: 10px; gap: 12px; transition: background 0.2s; }
+      .lb-row:hover { background: rgba(255,255,255,0.12); }
+      .lb-rank { font-weight: 900; width: 32px; text-align: center; font-size: 1.1rem; }
+      .lb-rank.gold { color: #ffd700; }
+      .lb-rank.silver { color: #c0c0c0; }
+      .lb-rank.bronze { color: #cd7f32; }
+      .lb-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+      .lb-name { flex: 1; font-weight: 700; }
+      .lb-stats { display: flex; gap: 20px; font-size: 0.85rem; font-weight: 600; opacity: 0.8; }
+      .lb-score { font-weight: 800; font-size: 1rem; }
+      .empty-state { text-align: center; padding: 60px 20px; opacity: 0.6; font-weight: 700; font-size: 1.2rem; }
+      .loading { text-align: center; padding: 40px; opacity: 0.6; font-weight: 700; }
+      @media (max-width: 500px) {
+        .lb-stats { display: none; }
+        .lb-podium { gap: 8px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="lb-container">
+      <div class="lb-header">
+        <h1>Classement</h1>
+        <div class="lb-nav">
+          <a href="/">Jouer</a>
+          <a href="/profile">Mon profil</a>
+        </div>
+      </div>
+      <div class="lb-filters">
+        <button class="lb-filter-btn active" data-period="all">Tout</button>
+        <button class="lb-filter-btn" data-period="month">Ce mois</button>
+        <button class="lb-filter-btn" data-period="week">Cette semaine</button>
+      </div>
+      <div id="lb-podium" class="lb-podium"></div>
+      <div id="lb-list">
+        <div class="loading">Chargement...</div>
+      </div>
+    </div>
+    <script type="module" src="/src/leaderboard.js"></script>
+  </body>
+</html>

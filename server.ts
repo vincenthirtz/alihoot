@@ -85,6 +85,15 @@ app.get('/admin/login', (_req, res) => {
   res.sendFile(path.join(CLIENT_DIR, 'login.html'));
 });
 
+// Public pages
+app.get('/leaderboard', (_req, res) => {
+  res.sendFile(path.join(CLIENT_DIR, 'leaderboard.html'));
+});
+
+app.get('/profile', (_req, res) => {
+  res.sendFile(path.join(CLIENT_DIR, 'profile.html'));
+});
+
 // ========== HEALTH CHECK ==========
 
 app.get('/health', (_req, res) => {
@@ -154,6 +163,38 @@ app.delete('/api/quizzes/:id', requireAdmin, async (req, res) => {
 app.get('/api/history', requireAdmin, async (_req, res) => {
   const history = await db.getGameHistory();
   res.json(history);
+});
+
+// Public: leaderboard
+app.get('/api/leaderboard', async (req, res) => {
+  const period = (req.query.period as string) || 'all';
+  const validPeriods = ['week', 'month', 'all'];
+  const safePeriod = validPeriods.includes(period) ? (period as 'week' | 'month' | 'all') : 'all';
+  const data = await db.getLeaderboard(safePeriod);
+  res.json(data);
+});
+
+// Public: player profile + achievements
+app.get('/api/players/:id/profile', async (req, res) => {
+  const playerId = parseInt(String(req.params.id));
+  if (isNaN(playerId)) return res.status(400).json({ error: 'ID invalide' });
+  const profile = await db.getPlayerProfile(playerId);
+  if (!profile) return res.status(404).json({ error: 'Joueur introuvable' });
+  res.json(profile);
+});
+
+// Public: player game history
+app.get('/api/players/:id/games', async (req, res) => {
+  const playerId = parseInt(String(req.params.id));
+  if (isNaN(playerId)) return res.status(400).json({ error: 'ID invalide' });
+  const games = await db.getPlayerGames(playerId);
+  res.json(games);
+});
+
+// Public: all achievements list
+app.get('/api/achievements', async (_req, res) => {
+  const achievements = await db.getAchievements();
+  res.json(achievements);
 });
 
 // ========== RATE LIMITING ==========
@@ -405,6 +446,40 @@ io.on('connection', (socket: RateLimitedSocket) => {
     }),
   );
 
+  // ========== PLAYER REGISTRATION ==========
+
+  socket.on(
+    'player:register',
+    async ({
+      email,
+      nickname,
+      avatar,
+    }: {
+      email: string;
+      nickname: string;
+      avatar: { icon: string; color: string };
+    }) => {
+      if (!email || !nickname) {
+        socket.emit('player:register-error', { message: 'Email et pseudo requis' });
+        return;
+      }
+
+      const player = await db.registerPlayer(email, nickname, avatar);
+      if (!player) {
+        socket.emit('player:register-error', { message: "Erreur lors de l'inscription" });
+        return;
+      }
+
+      socket.emit('player:registered', {
+        id: player.id,
+        email: player.email,
+        nickname: player.nickname,
+        avatar: player.avatar,
+      });
+      console.log(`Player registered: ${player.email} (${player.nickname})`);
+    },
+  );
+
   // ========== PLAYER EVENTS ==========
 
   socket.on(
@@ -414,14 +489,16 @@ io.on('connection', (socket: RateLimitedSocket) => {
       nickname,
       fingerprint,
       avatar: customAvatar,
+      playerId,
     }: {
       pin: string;
       nickname: string;
       fingerprint: string | null;
       avatar?: { icon: string; color: string };
+      playerId?: number | null;
     }) =>
       rateLimit(socket, 'join', () => {
-        const result = store.addPlayer(pin, socket.id, nickname, fingerprint, customAvatar);
+        const result = store.addPlayer(pin, socket.id, nickname, fingerprint, customAvatar, playerId);
         if (result.error) {
           socket.emit('player:error', { message: result.error });
           return;

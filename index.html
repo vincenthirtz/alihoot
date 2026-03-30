@@ -39,8 +39,32 @@
       </div>
     </div>
 
+    <!-- REGISTER SCREEN -->
+    <section id="register-screen" class="screen active" role="main" aria-label="Inscription">
+      <div class="card">
+        <h1 class="logo">Alihoot!</h1>
+        <p style="text-align: center; color: var(--card-label); margin-bottom: 15px">Inscris-toi pour sauvegarder tes scores</p>
+        <div class="input-group">
+          <label for="register-email">Ton email</label>
+          <input type="email" id="register-email" class="input-field" placeholder="email@exemple.com" autocomplete="email" aria-required="true" />
+        </div>
+        <div class="input-group">
+          <label for="register-nickname">Ton pseudo</label>
+          <input type="text" id="register-nickname" class="input-field" maxlength="20" placeholder="Pseudo..." autocomplete="off" aria-required="true" />
+        </div>
+        <div class="avatar-picker">
+          <label>Ton avatar</label>
+          <div class="avatar-preview" id="register-avatar-preview">🐱</div>
+          <div class="avatar-emoji-grid" id="register-emoji-grid"></div>
+          <div class="avatar-color-grid" id="register-color-grid"></div>
+        </div>
+        <button id="register-btn" class="btn btn-primary">C'est parti !</button>
+        <div id="register-error" class="error-msg" role="alert" aria-live="assertive"></div>
+      </div>
+    </section>
+
     <!-- JOIN SCREEN -->
-    <section id="join-screen" class="screen active" role="main" aria-label="Rejoindre une partie">
+    <section id="join-screen" class="screen" role="main" aria-label="Rejoindre une partie">
       <div class="card">
         <h1 class="logo">Alihoot!</h1>
         <div class="input-group">
@@ -61,6 +85,10 @@
         <div id="join-error" class="error-msg" role="alert" aria-live="assertive"></div>
         <div style="margin-top: 20px; text-align: center">
           <button id="training-btn" class="btn" style="background: var(--purple, #9b59b6); color: white">S'entraîner seul</button>
+        </div>
+        <div style="margin-top: 12px; text-align: center; display: flex; gap: 10px; justify-content: center">
+          <a href="/leaderboard" style="color: rgba(255,255,255,0.6); font-weight: 700; font-size: 0.85rem; text-decoration: none">Classement</a>
+          <a href="/profile" style="color: rgba(255,255,255,0.6); font-weight: 700; font-size: 0.85rem; text-decoration: none">Mon profil</a>
         </div>
       </div>
     </section>

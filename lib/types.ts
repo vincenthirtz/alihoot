@@ -87,6 +87,7 @@ export interface Player {
   streak: number;
   avatar: Avatar;
   fingerprint: string | null;
+  playerId: number | null;
 }
 
 export interface Spectator {
@@ -132,6 +133,7 @@ export interface LeaderboardEntry {
   connected: boolean;
   avatar: Avatar;
   streak: number;
+  playerId?: number | null;
 }
 
 export interface AnswerResult {
