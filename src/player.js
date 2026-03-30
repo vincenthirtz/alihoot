@@ -100,6 +100,20 @@ document.getElementById('toggle-sound').addEventListener('click', () => {
   btn.classList.toggle('off', !soundOn);
 });
 
+// Theme toggle
+document.getElementById('toggle-theme').addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  const isDark = document.body.classList.contains('dark');
+  document.getElementById('toggle-theme').textContent = isDark ? '☀️' : '🌙';
+  localStorage.setItem('alihoot-theme', isDark ? 'dark' : 'light');
+});
+
+// Restore theme
+if (localStorage.getItem('alihoot-theme') === 'dark') {
+  document.body.classList.add('dark');
+  document.getElementById('toggle-theme').textContent = '☀️';
+}
+
 // ========== LOADING OVERLAY ==========
 const loadingOverlay = document.getElementById('loading-overlay');
 const loadingTextEl = document.getElementById('loading-text');
@@ -492,6 +506,10 @@ socket.on(
       )
       .forEach((el) => el.remove());
 
+    // Reset answer counter
+    const answerCountEl = document.getElementById('player-answer-count');
+    if (answerCountEl) answerCountEl.style.display = 'none';
+
     freetextInput.style.display = 'none';
     freetextSubmit.style.display = 'none';
     multiHint.style.display = 'none';
@@ -590,6 +608,7 @@ socket.on(
     }
 
     showScreen('question');
+    AudioSystem.startTensionMusic(timeLimit);
   },
 );
 
@@ -839,7 +858,18 @@ socket.on('game:timer-tick', ({ remaining }) => {
   document.getElementById('timer-display').textContent = remaining;
 });
 
+// ========== ANSWER COUNTER (real-time) ==========
+
+socket.on('game:answer-count', ({ answered: count, total }) => {
+  const el = document.getElementById('player-answer-count');
+  if (el) {
+    el.textContent = `${count}/${total} joueurs ont répondu`;
+    el.style.display = 'block';
+  }
+});
+
 socket.on('game:time-up', ({ explanation }) => {
+  AudioSystem.stopTensionMusic();
   if (!answered || isSpectator) {
     document.querySelectorAll('#answer-grid .answer-btn').forEach((b) => {
       b.disabled = true;
@@ -940,6 +970,7 @@ socket.on(
     correctOrder,
     acceptedAnswers,
   }) => {
+    AudioSystem.stopTensionMusic();
     // First, reveal correct answers on the question screen
     revealCorrectAnswers({ correct, correctIndex, correctIndices, correctOrder, acceptedAnswers });
 
@@ -1039,30 +1070,46 @@ socket.on('game:reaction', ({ nickname, emoji }) => {
 
 socket.on('game:finished', ({ podium, rankings }) => {
   sessionStorage.removeItem('alihoot-session');
-  renderPodium(podium);
+  renderPodiumWithSuspense(podium);
   renderFinalLeaderboard(rankings);
   showScreen('podium');
-  startConfetti();
 });
 
-function renderPodium(podium) {
+function renderPodiumWithSuspense(podium) {
   const el = document.getElementById('podium');
-  const order = [1, 0, 2];
-  const classes = ['second', 'first', 'third'];
-  const medals = ['🥈', '🥇', '🥉'];
+  // Display order: 3rd, 2nd, 1st (suspense reveal)
+  const revealOrder = [2, 1, 0]; // indices into podium array
+  const classes = ['third', 'second', 'first'];
+  const medals = ['🥉', '🥈', '🥇'];
+  const delays = [500, 2500, 5000]; // ms before each reveal
 
-  el.innerHTML = order
-    .map((idx, i) => {
-      const p = podium[idx];
-      if (!p) return '';
-      return `<div class="podium-place">
-      <div class="podium-avatar">${p.avatar?.icon || '👤'}</div>
-      <div class="podium-name">${p.nickname}</div>
-      <div class="podium-score">${p.score} pts</div>
-      <div class="podium-block ${classes[i]}">${medals[i]}</div>
-    </div>`;
-    })
-    .join('');
+  el.innerHTML = '';
+
+  revealOrder.forEach((podiumIdx, step) => {
+    const p = podium[podiumIdx];
+    if (!p) return;
+
+    setTimeout(() => {
+      const place = document.createElement('div');
+      place.className = 'podium-place podium-reveal';
+      place.innerHTML = `
+        <div class="podium-avatar">${p.avatar?.icon || '👤'}</div>
+        <div class="podium-name">${p.nickname}</div>
+        <div class="podium-score">${p.score} pts</div>
+        <div class="podium-block ${classes[step]}">${medals[step]}</div>
+      `;
+
+      // Insert in visual order: third on right, second on left, first in center
+      if (step === 0) el.appendChild(place); // 3rd
+      else if (step === 1) el.insertBefore(place, el.firstChild); // 2nd goes before 3rd
+      else el.insertBefore(place, el.children[1] || null); // 1st goes between
+
+      AudioSystem.play(step === 2 ? 'victory' : 'leaderboard');
+
+      // Start confetti when 1st place is revealed
+      if (step === 2) startConfetti();
+    }, delays[step]);
+  });
 }
 
 function renderFinalLeaderboard(rankings) {

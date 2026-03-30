@@ -96,14 +96,81 @@ function play(name) {
   if (sounds[name]) sounds[name]();
 }
 
+// Tension music during questions — rhythmic pulse that speeds up
+let tensionOsc = null;
+let tensionGain = null;
+let tensionInterval = null;
+let tensionBpm = 90;
+
+function startTensionMusic(duration = 20) {
+  if (!musicEnabled) return;
+  stopTensionMusic();
+  const c = getCtx();
+  tensionGain = c.createGain();
+  tensionGain.gain.setValueAtTime(0.06, c.currentTime);
+  tensionGain.connect(c.destination);
+
+  tensionOsc = c.createOscillator();
+  tensionOsc.type = 'square';
+  tensionOsc.frequency.setValueAtTime(110, c.currentTime);
+  tensionOsc.connect(tensionGain);
+  tensionOsc.start();
+
+  const pattern = [110, 0, 165, 0, 110, 0, 220, 0];
+  let noteIdx = 0;
+  tensionBpm = 90;
+  const startTime = Date.now();
+
+  tensionInterval = setInterval(() => {
+    if (!tensionOsc) { clearInterval(tensionInterval); return; }
+    const elapsed = (Date.now() - startTime) / 1000;
+    const progress = Math.min(elapsed / duration, 1);
+    // Speed up as time runs out
+    tensionBpm = 90 + progress * 90;
+    // Volume increases too
+    if (tensionGain) tensionGain.gain.setValueAtTime(0.06 + progress * 0.04, c.currentTime);
+
+    const freq = pattern[noteIdx % pattern.length];
+    if (tensionOsc) {
+      tensionOsc.frequency.setValueAtTime(freq || 0.001, c.currentTime);
+    }
+    noteIdx++;
+  }, () => 60000 / tensionBpm / 2);
+
+  // Use fixed interval that adapts
+  clearInterval(tensionInterval);
+  function tick() {
+    if (!tensionOsc) return;
+    const elapsed = (Date.now() - startTime) / 1000;
+    const progress = Math.min(elapsed / duration, 1);
+    tensionBpm = 90 + progress * 90;
+    if (tensionGain) {
+      try { tensionGain.gain.setValueAtTime(0.06 + progress * 0.04, c.currentTime); } catch {}
+    }
+    const freq = pattern[noteIdx % pattern.length];
+    if (tensionOsc) {
+      try { tensionOsc.frequency.setValueAtTime(freq || 0.001, c.currentTime); } catch {}
+    }
+    noteIdx++;
+    tensionInterval = setTimeout(tick, 60000 / tensionBpm / 2);
+  }
+  tensionInterval = setTimeout(tick, 60000 / tensionBpm / 2);
+}
+
+function stopTensionMusic() {
+  if (tensionInterval) { clearTimeout(tensionInterval); tensionInterval = null; }
+  if (tensionOsc) { try { tensionOsc.stop(); } catch {} tensionOsc = null; }
+  if (tensionGain) { tensionGain.disconnect(); tensionGain = null; }
+}
+
 function toggle(state) {
   enabled = state;
-  if (!state) stopLobbyMusic();
+  if (!state) { stopLobbyMusic(); stopTensionMusic(); }
 }
 
 function toggleMusic(state) {
   musicEnabled = state;
-  if (!state) stopLobbyMusic();
+  if (!state) { stopLobbyMusic(); stopTensionMusic(); }
 }
 
-export const AudioSystem = { play, toggle, toggleMusic, startLobbyMusic, stopLobbyMusic, getCtx };
+export const AudioSystem = { play, toggle, toggleMusic, startLobbyMusic, stopLobbyMusic, startTensionMusic, stopTensionMusic, getCtx };

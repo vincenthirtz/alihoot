@@ -15,9 +15,12 @@
     <link rel="stylesheet" href="/css/player.css" />
   </head>
   <body>
-    <!-- Sound toggle -->
+    <!-- Sound / Theme toggles -->
     <div class="sound-toggle">
       <button class="toggle-btn" id="toggle-sound" title="Sons">🔊</button>
+    </div>
+    <div class="theme-toggle">
+      <button class="toggle-btn" id="toggle-theme" title="Thème sombre/clair">🌙</button>
     </div>
 
     <!-- Connection indicator -->
@@ -116,6 +119,7 @@
     <section id="waiting-screen" class="screen">
       <div class="spinner"></div>
       <div class="waiting-text">Réponse envoyée !</div>
+      <div class="answer-counter" id="player-answer-count" style="display: none"></div>
       <div class="waiting-text" id="waiting-subtext" style="margin-top: 10px; opacity: 0.7">En attente des autres joueurs<span class="waiting-dots"></span></div>
     </section>
 

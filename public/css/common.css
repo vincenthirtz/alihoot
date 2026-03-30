@@ -729,17 +729,24 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  animation: bounceIn 0.6s ease backwards;
 }
 
-.podium-place:nth-child(1) {
-  animation-delay: 0.4s;
+.podium-place.podium-reveal {
+  animation: podiumReveal 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
 }
-.podium-place:nth-child(2) {
-  animation-delay: 0.2s;
-}
-.podium-place:nth-child(3) {
-  animation-delay: 0.6s;
+
+@keyframes podiumReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(60px) scale(0.5);
+  }
+  60% {
+    transform: translateY(-10px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .podium-avatar {
@@ -1038,6 +1045,17 @@ body {
   font-weight: 700;
   margin: 15px 0;
   opacity: 0.9;
+}
+
+.answer-counter {
+  font-size: 1rem;
+  font-weight: 700;
+  opacity: 0.7;
+  margin-top: 12px;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  display: inline-block;
 }
 
 /* QR Code */

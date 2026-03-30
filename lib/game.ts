@@ -202,7 +202,8 @@ export function handleAnswer(
   const room = store.getRoom(pin);
   if (room) {
     const playerCount = store.getPlayerCount(pin);
-    io.to(room.adminSocketId).emit('game:answer-count', {
+    // Broadcast to admin AND all players
+    io.to(`room:${pin}`).emit('game:answer-count', {
       answered: room.answeredCount,
       total: playerCount,
     });

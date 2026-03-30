@@ -1259,11 +1259,10 @@ document.getElementById('resume-btn').addEventListener('click', () => {
 // ========== FINAL ==========
 
 socket.on('game:finished', ({ podium, rankings, dashboard }) => {
-  renderAdminPodium(podium);
+  renderAdminPodiumWithSuspense(podium);
   renderAdminFinalRankings(rankings);
   if (dashboard) renderDashboard(dashboard);
   showScreen('final');
-  startConfetti();
   sessionStorage.removeItem('alihoot-admin');
 });
 
@@ -1368,24 +1367,37 @@ function renderDashboard(data) {
   grid.innerHTML = html;
 }
 
-function renderAdminPodium(podium) {
+function renderAdminPodiumWithSuspense(podium) {
   const el = document.getElementById('admin-podium');
-  const order = [1, 0, 2];
-  const classes = ['second', 'first', 'third'];
-  const medals = ['🥈', '🥇', '🥉'];
+  const revealOrder = [2, 1, 0];
+  const classes = ['third', 'second', 'first'];
+  const medals = ['🥉', '🥈', '🥇'];
+  const delays = [500, 2500, 5000];
 
-  el.innerHTML = order
-    .map((idx, i) => {
-      const p = podium[idx];
-      if (!p) return '';
-      return `<div class="podium-place">
-      <div class="podium-avatar">${p.avatar?.icon || '👤'}</div>
-      <div class="podium-name">${p.nickname}</div>
-      <div class="podium-score">${p.score} pts</div>
-      <div class="podium-block ${classes[i]}">${medals[i]}</div>
-    </div>`;
-    })
-    .join('');
+  el.innerHTML = '';
+
+  revealOrder.forEach((podiumIdx, step) => {
+    const p = podium[podiumIdx];
+    if (!p) return;
+
+    setTimeout(() => {
+      const place = document.createElement('div');
+      place.className = 'podium-place podium-reveal';
+      place.innerHTML = `
+        <div class="podium-avatar">${p.avatar?.icon || '👤'}</div>
+        <div class="podium-name">${p.nickname}</div>
+        <div class="podium-score">${p.score} pts</div>
+        <div class="podium-block ${classes[step]}">${medals[step]}</div>
+      `;
+
+      if (step === 0) el.appendChild(place);
+      else if (step === 1) el.insertBefore(place, el.firstChild);
+      else el.insertBefore(place, el.children[1] || null);
+
+      AudioSystem.play(step === 2 ? 'victory' : 'leaderboard');
+      if (step === 2) startConfetti();
+    }, delays[step]);
+  });
 }
 
 function renderAdminFinalRankings(rankings) {
