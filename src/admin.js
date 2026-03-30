@@ -644,6 +644,9 @@ window.changeQuestionType = function (btn, type) {
   if (currentTime === (defaultTimeLimits[prevType] || 20)) {
     timeSelect.value = defaultTimeLimits[type] || 20;
   }
+
+  // Update live preview
+  if (livePreviewBlock === block) scheduleLivePreviewUpdate();
 };
 
 window.addChoice = function (btn) {
@@ -669,6 +672,7 @@ window.addChoice = function (btn) {
     <input type="text" placeholder="Réponse ${idx + 1}" maxlength="100" style="border-left: 3px solid ${colors[idx] || '#999'};">
   `;
   grid.appendChild(div);
+  scheduleLivePreviewUpdate();
 };
 
 window.removeChoice = function (btn) {
@@ -677,6 +681,7 @@ window.removeChoice = function (btn) {
   const items = grid.querySelectorAll('.choice-item');
   if (items.length <= 2) return;
   items[items.length - 1].remove();
+  scheduleLivePreviewUpdate();
 };
 
 window.addOrderingItem = function (btn) {
@@ -689,6 +694,7 @@ window.addOrderingItem = function (btn) {
   div.className = 'ordering-item';
   div.innerHTML = `<span class="ordering-num">${idx + 1}.</span><input type="text" placeholder="Element ${idx + 1}" maxlength="100">`;
   list.appendChild(div);
+  scheduleLivePreviewUpdate();
 };
 
 window.removeOrderingItem = function (btn) {
@@ -697,6 +703,7 @@ window.removeOrderingItem = function (btn) {
   const items = list.querySelectorAll('.ordering-item');
   if (items.length <= 2) return;
   items[items.length - 1].remove();
+  scheduleLivePreviewUpdate();
 };
 
 // Extract question data from a block element
@@ -775,11 +782,15 @@ window.moveQuestion = function (btn, direction) {
     list.insertBefore(blocks[idx + 1], block);
   }
   renumberQuestions();
+  scheduleLivePreviewUpdate();
 };
 
 window.removeQuestion = function (btn) {
-  btn.closest('.question-block').remove();
+  const block = btn.closest('.question-block');
+  if (livePreviewBlock === block) livePreviewBlock = null;
+  block.remove();
   renumberQuestions();
+  scheduleLivePreviewUpdate();
 };
 
 function renumberQuestions() {
@@ -894,6 +905,149 @@ function renderPreview() {
     ${q.explanation ? `<div class="explanation-display">💡 ${q.explanation}</div>` : ''}
   `;
 }
+
+// ========== LIVE PREVIEW (real-time) ==========
+
+let livePreviewBlock = null;
+let livePreviewDebounce = null;
+
+function updateLivePreview() {
+  const body = document.getElementById('live-preview-body');
+  if (!body) return;
+
+  if (!livePreviewBlock || !livePreviewBlock.isConnected) {
+    body.innerHTML = `<div class="live-preview-empty">Cliquez sur une question pour voir l'apercu</div>`;
+    return;
+  }
+
+  const q = getQuestionDataFromBlock(livePreviewBlock);
+  const blocks = document.querySelectorAll('.question-block');
+  const qIndex = Array.from(blocks).indexOf(livePreviewBlock);
+  const total = blocks.length;
+
+  const multiplierBadge =
+    q.pointsMultiplier && q.pointsMultiplier > 1
+      ? `<span class="multiplier-badge">x${q.pointsMultiplier}</span>`
+      : '';
+
+  let answersHtml = '';
+  if (q.type === 'slider') {
+    const unit = q.unit || '';
+    const mid = ((q.sliderMin || 0) + (q.sliderMax || 100)) / 2;
+    answersHtml = `<div class="slider-preview-container">
+      <div class="slider-labels"><span>${q.sliderMin || 0}${unit}</span><span>${q.sliderMax || 100}${unit}</span></div>
+      <input type="range" class="slider-input" min="${q.sliderMin || 0}" max="${q.sliderMax || 100}" step="${q.sliderStep || 1}" value="${mid}" disabled>
+      <div class="slider-value">${mid}${unit}</div>
+    </div>`;
+  } else if (q.type === 'ordering') {
+    const items = q.items || [];
+    answersHtml = `<div class="preview-ordering">${items
+      .filter((item) => item)
+      .map(
+        (item) =>
+          `<div class="ordering-drag-item" style="cursor:default;"><span class="drag-handle">☰</span><span class="drag-text">${item}</span></div>`,
+      )
+      .join('')}</div>`;
+  } else if (q.type === 'truefalse') {
+    answersHtml = `<div class="answer-grid cols-1" style="pointer-events:none;">
+      <div class="answer-btn btn-green"><span class="shape">✅</span><span class="text">Vrai</span></div>
+      <div class="answer-btn btn-red"><span class="shape">❌</span><span class="text">Faux</span></div>
+    </div>`;
+  } else if (q.type === 'freetext') {
+    answersHtml = `<div style="text-align:center; opacity:0.7; font-weight:700; padding:20px;">✏️ Champ de reponse libre</div>`;
+  } else {
+    const choices = q.choices || [];
+    answersHtml = `<div class="answer-grid" style="pointer-events:none;">
+      ${choices
+        .filter((c) => c)
+        .map(
+          (c, i) =>
+            `<div class="answer-btn ${previewBarColors[i] || 'btn-red'}"><span class="shape">${previewShapes[i] || ''}</span><span class="text">${c}</span></div>`,
+        )
+        .join('')}
+    </div>`;
+  }
+
+  body.innerHTML = `
+    <div class="question-counter">Question ${qIndex + 1} / ${total} ${multiplierBadge}</div>
+    <div class="timer-text">${q.timeLimit}s</div>
+    <div class="timer-bar-container"><div class="timer-bar" style="width:100%;"></div></div>
+    ${q.image ? `<img class="question-image" src="${q.image}" style="display:block;" alt="">` : ''}
+    ${
+      q.video
+        ? (() => {
+            const ytId = extractYouTubeId(q.video);
+            if (ytId)
+              return `<div class="question-video" style="display:block;"><iframe src="https://www.youtube-nocookie.com/embed/${ytId}?rel=0" frameborder="0" allowfullscreen></iframe></div>`;
+            return `<div class="question-video" style="display:block;"><video src="${q.video}" controls playsinline></video></div>`;
+          })()
+        : ''
+    }
+    <div class="question-text">${q.text || '<em style="opacity:0.5;">Sans titre</em>'}</div>
+    ${answersHtml}
+    ${q.explanation ? `<div class="explanation-display">💡 ${q.explanation}</div>` : ''}
+  `;
+}
+
+function setLivePreviewBlock(block) {
+  if (livePreviewBlock === block) return;
+
+  // Remove highlight from previous
+  if (livePreviewBlock) livePreviewBlock.classList.remove('preview-active');
+
+  livePreviewBlock = block;
+
+  // Add highlight to current
+  if (block) block.classList.add('preview-active');
+
+  updateLivePreview();
+}
+
+function scheduleLivePreviewUpdate() {
+  clearTimeout(livePreviewDebounce);
+  livePreviewDebounce = setTimeout(updateLivePreview, 80);
+}
+
+// Listen for focus/click on question blocks to set active preview
+document.getElementById('questions-list').addEventListener('focusin', (e) => {
+  const block = e.target.closest('.question-block');
+  if (block) setLivePreviewBlock(block);
+});
+
+document.getElementById('questions-list').addEventListener('click', (e) => {
+  const block = e.target.closest('.question-block');
+  if (block) setLivePreviewBlock(block);
+});
+
+// Listen for input changes to update preview in real-time
+document.getElementById('questions-list').addEventListener('input', (e) => {
+  const block = e.target.closest('.question-block');
+  if (block) {
+    if (livePreviewBlock !== block) setLivePreviewBlock(block);
+    scheduleLivePreviewUpdate();
+  }
+});
+
+// Listen for change events (selects, radios, checkboxes)
+document.getElementById('questions-list').addEventListener('change', (e) => {
+  const block = e.target.closest('.question-block');
+  if (block) {
+    if (livePreviewBlock !== block) setLivePreviewBlock(block);
+    scheduleLivePreviewUpdate();
+  }
+});
+
+// Toggle live preview panel
+window.toggleLivePreview = function () {
+  const panel = document.getElementById('live-preview-panel');
+  const showBtn = document.getElementById('live-preview-show-btn');
+  panel.classList.toggle('hidden');
+  showBtn.classList.toggle('visible', panel.classList.contains('hidden'));
+};
+
+document.getElementById('live-preview-toggle').addEventListener('click', () => {
+  toggleLivePreview();
+});
 
 // Start with 1 question
 addQuestion();

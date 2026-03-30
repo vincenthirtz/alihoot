@@ -111,9 +111,25 @@
           <div class="filter-tags" id="filter-tags"></div>
         </div>
 
-        <div id="questions-list" class="questions-list"></div>
+        <div class="editor-with-preview">
+          <div class="editor-main">
+            <div id="questions-list" class="questions-list"></div>
 
-        <button id="add-question-btn" class="add-question-btn">+ Ajouter une question</button>
+            <button id="add-question-btn" class="add-question-btn">+ Ajouter une question</button>
+          </div>
+
+          <div class="live-preview-panel" id="live-preview-panel">
+            <div class="live-preview-header">
+              <span class="live-preview-title">Apercu en direct</span>
+              <button class="live-preview-toggle" id="live-preview-toggle" title="Masquer l'apercu">&times;</button>
+            </div>
+            <div class="live-preview-phone">
+              <div class="live-preview-body" id="live-preview-body">
+                <div class="live-preview-empty">Cliquez sur une question pour voir l'apercu</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div class="import-export-bar">
           <button id="export-quiz-btn" class="ie-btn" title="Exporter en JSON">📥 Exporter</button>
@@ -255,6 +271,9 @@
         <button class="btn btn-start" id="resume-btn">▶️ Reprendre</button>
       </div>
     </div>
+
+    <!-- Live preview show button (visible when panel is hidden) -->
+    <button class="live-preview-show-btn" id="live-preview-show-btn" onclick="toggleLivePreview()">Apercu en direct</button>
 
     <script type="module" src="/src/admin.js"></script>
   </body>
