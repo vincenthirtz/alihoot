@@ -61,17 +61,53 @@ async function init() {
   }
 }
 
+let _socketAuthResolve = null;
+let _socketAuthPromise = null;
+
 function showAdmin() {
   const createScreen = document.getElementById('create-screen');
   if (createScreen) createScreen.classList.add('active');
 }
 
 function socketAuth() {
-  if (typeof window._socket !== 'undefined' && currentToken) {
-    window._socket.emit('admin:auth', { token: currentToken });
-  } else if (typeof window._socket !== 'undefined') {
-    window._socket.emit('admin:auth', { token: '' });
+  _socketAuthPromise = new Promise((resolve) => {
+    _socketAuthResolve = resolve;
+  });
+
+  const s = window._socket;
+  if (!s) return;
+
+  if (!authRequired) {
+    // No auth needed, resolve immediately
+    if (_socketAuthResolve) _socketAuthResolve();
+    s.emit('admin:auth', { token: '' });
+    return;
   }
+
+  if (currentToken) {
+    s.emit('admin:auth', { token: currentToken });
+  } else {
+    s.emit('admin:auth', { token: '' });
+  }
+
+  // Listen for auth result (one-time)
+  s.once('admin:auth-ok', () => {
+    if (_socketAuthResolve) _socketAuthResolve();
+  });
+  s.once('admin:auth-error', () => {
+    // Auth failed but don't block forever - resolve anyway
+    // The server will reject actions with "Authentification requise"
+    if (_socketAuthResolve) _socketAuthResolve();
+  });
+
+  // Timeout fallback: don't block forever if server never responds
+  setTimeout(() => {
+    if (_socketAuthResolve) _socketAuthResolve();
+  }, 5000);
+}
+
+function waitForAuth() {
+  return _socketAuthPromise || Promise.resolve();
 }
 
 async function logout() {
@@ -99,4 +135,4 @@ async function authFetch(url, options = {}) {
   return fetch(fullUrl, { ...options, headers });
 }
 
-export const AdminAuth = { init, logout, getToken, isRequired, authFetch };
+export const AdminAuth = { init, logout, getToken, isRequired, authFetch, socketAuth, waitForAuth };

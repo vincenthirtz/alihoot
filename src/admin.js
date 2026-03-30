@@ -24,6 +24,9 @@ let _loadingInterval = setInterval(() => {
 socket.on('connect', () => {
   if (_loadingOverlay) _loadingOverlay.classList.add('hidden');
   clearInterval(_loadingInterval);
+
+  // Re-authenticate on every (re)connect so server knows this socket is admin
+  AdminAuth.socketAuth();
 });
 
 // State
@@ -1069,9 +1072,12 @@ document.getElementById('add-question-btn').addEventListener('click', () => addQ
 
 // ========== CREATE QUIZ ==========
 
-document.getElementById('create-quiz-btn').addEventListener('click', () => {
+document.getElementById('create-quiz-btn').addEventListener('click', async () => {
   const title = document.getElementById('quiz-title').value.trim();
   const errorEl = document.getElementById('create-error');
+
+  // Ensure socket auth is complete before creating quiz
+  await AdminAuth.waitForAuth();
 
   if (!title) {
     errorEl.textContent = 'Donne un titre au quiz';
@@ -1229,6 +1235,13 @@ socket.on('admin:room-created', ({ pin, adminToken: token }) => {
 });
 
 socket.on('admin:error', ({ message }) => {
+  if (message === 'Authentification requise') {
+    // Re-authenticate and show a clearer message
+    AdminAuth.socketAuth();
+    document.getElementById('create-error').textContent =
+      'Session expirée, reconnexion en cours... Réessaie dans quelques secondes.';
+    return;
+  }
   document.getElementById('create-error').textContent = message;
 });
 
