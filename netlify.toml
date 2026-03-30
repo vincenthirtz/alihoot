@@ -1,6 +1,6 @@
 [build]
-  publish = "public"
-  command = "echo 'Static build ready'"
+  publish = "dist/client"
+  command = "npm install --include=dev && npx vite build"
 
 [[redirects]]
   from = "/admin/login"

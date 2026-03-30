@@ -1,12 +1,14 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import { rateLimit as createHttpRateLimit } from 'express-rate-limit';
 import http from 'http';
 import { Server, Socket } from 'socket.io';
 import path from 'path';
 import * as store from './lib/store';
 import * as game from './lib/game';
 import * as db from './lib/db';
+import * as redis from './lib/redis';
 
 const app = express();
 const server = http.createServer(app);
@@ -30,20 +32,32 @@ const io = new Server(server, {
 
 // Resolve root directory (works from both src and dist/)
 const ROOT_DIR = path.resolve(__dirname, '..');
+const CLIENT_DIR = path.join(ROOT_DIR, 'dist', 'client');
 const PUBLIC_DIR = path.join(ROOT_DIR, 'public');
 
 // CORS for API routes
 app.use(cors(corsOptions));
 
+// HTTP rate limiting
+const apiLimiter = createHttpRateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes, réessaie dans une minute' },
+});
+app.use('/api/', apiLimiter);
+
 // JSON body parser with size limit
 app.use(express.json({ limit: '1mb' }));
 
-// Serve static files
+// Serve static files (Vite build output in production, public/ for static assets)
+app.use(express.static(CLIENT_DIR));
 app.use(express.static(PUBLIC_DIR));
 
-// Routes
+// Routes — serve Vite-built HTML pages
 app.get('/', (_req, res) => {
-  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  res.sendFile(path.join(CLIENT_DIR, 'index.html'));
 });
 
 app.get('/admin', async (req, res) => {
@@ -53,7 +67,7 @@ app.get('/admin', async (req, res) => {
     const user = await db.verifyToken(token);
     if (!user) return res.redirect('/admin/login');
   }
-  res.sendFile(path.join(PUBLIC_DIR, 'admin.html'));
+  res.sendFile(path.join(CLIENT_DIR, 'admin.html'));
 });
 
 app.get('/admin/history', async (req, res) => {
@@ -63,12 +77,12 @@ app.get('/admin/history', async (req, res) => {
     const user = await db.verifyToken(token);
     if (!user) return res.redirect('/admin/login');
   }
-  res.sendFile(path.join(PUBLIC_DIR, 'history.html'));
+  res.sendFile(path.join(CLIENT_DIR, 'history.html'));
 });
 
 app.get('/admin/login', (_req, res) => {
   if (!adminAuthEnabled) return res.redirect('/admin');
-  res.sendFile(path.join(PUBLIC_DIR, 'login.html'));
+  res.sendFile(path.join(CLIENT_DIR, 'login.html'));
 });
 
 // ========== HEALTH CHECK ==========
@@ -549,6 +563,10 @@ server.listen(PORT, async () => {
   console.log(`  👑 Admin   : http://localhost:${PORT}/admin`);
   console.log(`  📊 Historique : http://localhost:${PORT}/admin/history`);
   await db.initTables();
+  if (process.env.REDIS_URL) {
+    redis.getClient();
+    console.log('  🔴 Redis connecté');
+  }
   console.log('');
 
   // Keep-alive: self-ping every 14 min to prevent Render free tier from sleeping

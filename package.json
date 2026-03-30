@@ -5,8 +5,9 @@
   "main": "dist/server.js",
   "scripts": {
     "start": "node dist/server.js",
-    "dev": "tsx watch server.ts",
-    "build": "tsc",
+    "dev": "vite",
+    "dev:server": "tsx watch server.ts",
+    "build": "vite build && tsc",
     "render-build": "npm install --include=dev && npm run build",
     "prod": "npm run build && NODE_ENV=production node dist/server.js",
     "lint": "eslint . && prettier --check .",
@@ -18,7 +19,12 @@
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^4.21.0",
-    "socket.io": "^4.7.0"
+    "express-rate-limit": "^8.3.1",
+    "html2canvas": "^1.4.1",
+    "ioredis": "^5.10.1",
+    "qrious": "^4.0.2",
+    "socket.io": "^4.7.0",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -30,6 +36,7 @@
     "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.2"
+    "typescript-eslint": "^8.57.2",
+    "vite": "^8.0.3"
   }
 }

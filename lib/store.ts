@@ -6,6 +6,7 @@ import {
   sanitizeUrl,
   generateAvatar,
 } from './utils';
+import * as redis from './redis';
 
 // ========== LIMITS ==========
 
@@ -156,6 +157,9 @@ export function createQuiz(
     shuffleChoices: quizzes[id].shuffleChoices,
   }).catch(() => {});
 
+  // Cache in Redis
+  redis.cacheQuiz(id, quizzes[id]).catch(() => {});
+
   return id;
 }
 
@@ -189,6 +193,14 @@ export function createRoom(quizId: string, adminSocketId: string): Room | null {
 export async function ensureQuizLoaded(quizId: string): Promise<Quiz | null> {
   if (quizzes[quizId]) return quizzes[quizId];
 
+  // Try Redis cache first
+  const cached = (await redis.getCachedQuiz(quizId)) as Quiz | null;
+  if (cached) {
+    quizzes[quizId] = cached;
+    return cached;
+  }
+
+  // Fallback to database
   const data = await db.loadQuiz(quizId);
   if (!data) return null;
 
@@ -199,6 +211,10 @@ export async function ensureQuizLoaded(quizId: string): Promise<Quiz | null> {
     shuffleChoices: data.shuffle_choices || false,
     questions: data.questions,
   };
+
+  // Cache for next time
+  redis.cacheQuiz(quizId, quizzes[quizId]).catch(() => {});
+
   return quizzes[quizId];
 }
 
