@@ -162,7 +162,7 @@
         </div>
       </div>
 
-      <div class="player-count" id="player-count">0 joueur(s)</div>
+      <div class="player-count" id="player-count" aria-live="polite" aria-atomic="true">0 joueur(s)</div>
       <div class="player-list" id="room-players"></div>
       <button id="start-game-btn" class="btn btn-start" disabled>Lancer la partie</button>
     </section>
@@ -176,7 +176,8 @@
     <section id="question-display" class="screen">
       <div class="question-counter" id="admin-q-counter"></div>
       <div class="progress-bar-container" id="admin-progress-bar"></div>
-      <div class="timer-text" id="admin-timer">20</div>
+      <div class="timer-text" id="admin-timer" aria-live="off" aria-atomic="true" aria-label="Temps restant">20</div>
+      <div id="admin-timer-sr-announce" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
       <div class="timer-bar-container">
         <div class="timer-bar" id="admin-timer-bar"></div>
       </div>
@@ -184,7 +185,7 @@
       <div class="question-video" id="admin-q-video" style="display: none"></div>
       <div class="question-text" id="admin-q-text"></div>
       <div class="answer-grid" id="admin-answer-grid"></div>
-      <div class="answer-count" id="admin-answer-count">0 / 0 réponses</div>
+      <div class="answer-count" id="admin-answer-count" aria-live="polite" aria-atomic="true">0 / 0 réponses</div>
       <button class="btn btn-small btn-pause" id="pause-btn" onclick="togglePause()">
         ⏸️ Pause
       </button>
@@ -273,5 +274,10 @@
     <button class="live-preview-show-btn" id="live-preview-show-btn" onclick="toggleLivePreview()">Apercu en direct</button>
 
     <script type="module" src="/src/admin.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      }
+    </script>
   </body>
 </html>

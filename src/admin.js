@@ -1463,6 +1463,11 @@ socket.on(
 socket.on('game:timer-tick', ({ remaining }) => {
   const el = document.getElementById('admin-timer');
   if (el) el.textContent = remaining;
+  // Announce key milestones to screen readers
+  if (remaining === 30 || remaining === 10 || remaining === 5) {
+    const srEl = document.getElementById('admin-timer-sr-announce');
+    if (srEl) srEl.textContent = `${remaining} secondes restantes`;
+  }
 });
 
 socket.on('game:answer-count', ({ answered, total }) => {

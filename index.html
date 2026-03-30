@@ -126,7 +126,8 @@
     <section id="question-screen" class="screen" role="main" aria-label="Question en cours">
       <div class="question-counter" id="q-counter" aria-live="polite"></div>
       <div class="progress-bar-container" id="q-progress-bar"></div>
-      <div class="timer-text" id="timer-display" role="timer" aria-live="off" aria-label="Temps restant">20</div>
+      <div class="timer-text" id="timer-display" role="timer" aria-live="off" aria-atomic="true" aria-label="Temps restant">20</div>
+      <div id="timer-sr-announce" class="sr-only" aria-live="assertive" aria-atomic="true"></div>
       <div class="timer-bar-container"><div class="timer-bar" id="timer-bar"></div></div>
       <img class="question-image" id="q-image" style="display: none" alt="" />
       <div class="question-video" id="q-video" style="display: none"></div>
@@ -147,7 +148,7 @@
     <section id="waiting-screen" class="screen">
       <div class="spinner"></div>
       <div class="waiting-text">Réponse envoyée !</div>
-      <div class="answer-counter" id="player-answer-count" style="display: none"></div>
+      <div class="answer-counter" id="player-answer-count" aria-live="polite" style="display: none"></div>
       <div class="waiting-text" id="waiting-subtext" style="margin-top: 10px; opacity: 0.7">En attente des autres joueurs<span class="waiting-dots"></span></div>
     </section>
 
@@ -155,15 +156,15 @@
     <section id="result-screen" class="screen" role="alert" aria-live="assertive" aria-label="Résultat">
       <div class="success-icon" id="result-icon" aria-hidden="true"></div>
       <div class="result-text" id="result-text"></div>
-      <div class="result-points" id="result-points"></div>
-      <div class="result-rank" id="result-rank" style="display: none"></div>
+      <div class="result-points" id="result-points" aria-live="polite"></div>
+      <div class="result-rank" id="result-rank" aria-live="polite" style="display: none"></div>
       <div class="explanation-display" id="result-explanation" style="display: none"></div>
     </section>
 
     <!-- LEADERBOARD SCREEN -->
     <section id="leaderboard-screen" class="screen" role="main" aria-label="Classement">
       <h2 class="leaderboard-title">Classement</h2>
-      <div class="leaderboard" id="player-leaderboard"></div>
+      <div class="leaderboard" id="player-leaderboard" aria-live="polite" aria-relevant="additions text"></div>
       <div class="reactions-bar" id="player-reactions" role="group" aria-label="Réactions">
         <button class="reaction-btn" data-emoji="👏" aria-label="Applaudir">👏</button>
         <button class="reaction-btn" data-emoji="🔥" aria-label="Feu">🔥</button>
@@ -179,7 +180,7 @@
       <div class="final-title">Résultats finaux !</div>
       <div class="podium-container" id="podium"></div>
       <div class="leaderboard" id="final-leaderboard" style="margin-top: 20px"></div>
-      <div class="your-position" id="your-position"></div>
+      <div class="your-position" id="your-position" aria-live="polite"></div>
     </section>
 
     <!-- PAUSE OVERLAY -->
@@ -197,7 +198,14 @@
     <script type="module" src="/src/player.js"></script>
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
+          reg.addEventListener('updatefound', () => {
+            const newSW = reg.installing;
+            newSW.addEventListener('statechange', () => {
+              if (newSW.state === 'activated') location.reload();
+            });
+          });
+        }).catch(() => {});
       }
     </script>
   </body>

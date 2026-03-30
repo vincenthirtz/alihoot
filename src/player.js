@@ -963,6 +963,11 @@ document.getElementById('slider-submit').addEventListener('click', () => {
 
 socket.on('game:timer-tick', ({ remaining }) => {
   document.getElementById('timer-display').textContent = remaining;
+  // Announce key milestones to screen readers (avoid spamming every second)
+  if (remaining === 30 || remaining === 10 || remaining === 5) {
+    const srEl = document.getElementById('timer-sr-announce');
+    if (srEl) srEl.textContent = `${remaining} secondes restantes`;
+  }
 });
 
 // ========== ANSWER COUNTER (real-time) ==========
