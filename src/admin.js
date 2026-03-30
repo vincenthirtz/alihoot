@@ -827,8 +827,8 @@ function renumberQuestions() {
 let previewIndex = 0;
 let previewQuestions = [];
 
-const previewBarColors = ['btn-red', 'btn-blue', 'btn-yellow', 'btn-green', 'btn-red', 'btn-blue'];
-const previewShapes = ['&#9650;', '&#9670;', '&#9679;', '&#9724;', '&#9733;', '&#9829;'];
+const previewBarColors = ['btn-red', 'btn-blue', 'btn-yellow', 'btn-green', 'btn-orange', 'btn-teal', 'btn-pink', 'btn-indigo'];
+const previewShapes = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
 window.openPreview = function () {
   const blocks = document.querySelectorAll('.question-block');
@@ -1336,9 +1336,9 @@ socket.on('game:starting', ({ countdown }) => {
 
 // ========== GAME FLOW ==========
 
-const barColors = ['btn-red', 'btn-blue', 'btn-yellow', 'btn-green', 'btn-red', 'btn-blue'];
-const shapes = ['&#9650;', '&#9670;', '&#9679;', '&#9724;', '&#9733;', '&#9829;'];
-const statBarColors = ['bar-red', 'bar-blue', 'bar-yellow', 'bar-green', 'bar-red', 'bar-blue'];
+const barColors = ['btn-red', 'btn-blue', 'btn-yellow', 'btn-green', 'btn-orange', 'btn-teal', 'btn-pink', 'btn-indigo'];
+const shapes = ['1', '2', '3', '4', '5', '6', '7', '8'];
+const statBarColors = ['bar-red', 'bar-blue', 'bar-yellow', 'bar-green', 'bar-orange', 'bar-teal', 'bar-pink', 'bar-indigo'];
 
 // YouTube URL parser
 function extractYouTubeId(url) {

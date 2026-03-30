@@ -157,6 +157,10 @@
 .stat-bar.bar-blue { background: var(--blue); }
 .stat-bar.bar-yellow { background: var(--yellow); }
 .stat-bar.bar-green { background: var(--green); }
+.stat-bar.bar-orange { background: var(--orange); }
+.stat-bar.bar-teal { background: var(--teal); }
+.stat-bar.bar-pink { background: var(--pink); }
+.stat-bar.bar-indigo { background: var(--indigo); }
 
 .stat-bar.correct-bar {
   box-shadow: 0 0 15px rgba(46, 204, 113, 0.6);

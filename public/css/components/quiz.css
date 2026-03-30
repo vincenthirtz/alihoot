@@ -174,6 +174,8 @@
 .answer-btn:nth-child(4) { animation-delay: 0.26s; }
 .answer-btn:nth-child(5) { animation-delay: 0.33s; }
 .answer-btn:nth-child(6) { animation-delay: 0.4s; }
+.answer-btn:nth-child(7) { animation-delay: 0.47s; }
+.answer-btn:nth-child(8) { animation-delay: 0.54s; }
 
 @keyframes answerSlideIn {
   from {
@@ -194,14 +196,28 @@
   transform: scale(0.98);
 }
 .answer-btn .shape {
-  font-size: 1.5rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 900;
   flex-shrink: 0;
+  color: var(--white);
 }
 
 .answer-btn.btn-red { background: var(--red); }
 .answer-btn.btn-blue { background: var(--blue); }
-.answer-btn.btn-yellow { background: var(--yellow); }
+.answer-btn.btn-yellow { background: var(--yellow); color: #1a1a2e; }
+.answer-btn.btn-yellow .shape { background: rgba(0, 0, 0, 0.2); color: var(--white); }
 .answer-btn.btn-green { background: var(--green); }
+.answer-btn.btn-orange { background: var(--orange); }
+.answer-btn.btn-teal { background: var(--teal); }
+.answer-btn.btn-pink { background: var(--pink); }
+.answer-btn.btn-indigo { background: var(--indigo); }
 
 .answer-btn.selected {
   outline: 4px solid var(--white);

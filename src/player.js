@@ -155,7 +155,10 @@ function setConnectionStatus(status) {
 }
 
 socket.on('connect', () => setConnectionStatus('connected'));
-socket.on('disconnect', () => setConnectionStatus('disconnected'));
+socket.on('disconnect', () => {
+  setConnectionStatus('disconnected');
+  joinBtn.disabled = false;
+});
 socket.io.on('reconnect_attempt', () => setConnectionStatus('reconnecting'));
 socket.io.on('reconnect', () => {
   setConnectionStatus('connected');
@@ -372,6 +375,10 @@ joinBtn.addEventListener('click', () => {
     joinError.textContent = 'Entre un pseudo';
     return;
   }
+  if (!socket.connected) {
+    joinError.textContent = 'Pas de connexion au serveur';
+    return;
+  }
   joinError.textContent = '';
   joinBtn.disabled = true;
   socket.emit('player:join', {
@@ -430,6 +437,11 @@ socket.on('player:joined-spectator', ({ pin, nickname, avatar, state }) => {
 
 socket.on('player:error', ({ message }) => {
   joinError.textContent = message;
+  joinBtn.disabled = false;
+});
+
+socket.on('error:rate-limit', ({ message }) => {
+  joinError.textContent = message || 'Trop de requêtes, ralentis !';
   joinBtn.disabled = false;
 });
 
@@ -518,8 +530,8 @@ socket.on('game:starting', ({ countdown }) => {
 
 // ========== QUESTION ==========
 
-const barColors = ['btn-red', 'btn-blue', 'btn-yellow', 'btn-green', 'btn-red', 'btn-blue'];
-const shapeIcons = ['&#9650;', '&#9670;', '&#9679;', '&#9724;', '&#9733;', '&#9829;'];
+const barColors = ['btn-red', 'btn-blue', 'btn-yellow', 'btn-green', 'btn-orange', 'btn-teal', 'btn-pink', 'btn-indigo'];
+const shapeIcons = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
 let currentOrderingMap = null;
 
