@@ -362,6 +362,19 @@ socket.on('player:register-error', ({ message }) => {
   registerBtn.disabled = false;
 });
 
+// Skip registration — play without an account
+document.getElementById('skip-register-btn').addEventListener('click', () => {
+  const nickname = registerNickname.value.trim();
+  if (!nickname) {
+    registerError.textContent = 'Entre au moins un pseudo';
+    return;
+  }
+  currentNickname = nickname;
+  document.getElementById('nickname-input').value = nickname;
+  renderAvatarPicker();
+  showScreen('join');
+});
+
 // ========== JOIN ==========
 
 joinBtn.addEventListener('click', () => {

@@ -477,7 +477,14 @@ io.on('connection', (socket: RateLimitedSocket) => {
 
       const player = await db.registerPlayer(email, nickname, avatar);
       if (!player) {
-        socket.emit('player:register-error', { message: "Erreur lors de l'inscription" });
+        // DB unavailable — still let the player through without persistence
+        socket.emit('player:registered', {
+          id: null,
+          email,
+          nickname,
+          avatar,
+        });
+        log.warn({ email, nickname }, 'Player registered without DB (offline mode)');
         return;
       }
 
