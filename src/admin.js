@@ -597,7 +597,7 @@ function renderQuestionBody(block, type, prefill = null) {
         </div>
         <div class="choice-item">
           <input type="radio" name="correct-${block.dataset.index}" value="1"${correct === 1 ? ' checked' : ''}>
-          <span style="font-weight:700;color:var(--red);">❌ Faux</span>
+          <span style="font-weight:700;color:#ff6b6b;">❌ Faux</span>
         </div>
       </div>`;
   } else if (type === 'freetext') {
