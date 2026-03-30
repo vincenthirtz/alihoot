@@ -36,6 +36,8 @@
       .lb-score { font-weight: 800; font-size: 1rem; }
       .empty-state { text-align: center; padding: 60px 20px; opacity: 0.6; font-weight: 700; font-size: 1.2rem; }
       .loading { text-align: center; padding: 40px; opacity: 0.6; font-weight: 700; }
+      @keyframes lb-fade-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+      .lb-animate { animation: lb-fade-in 0.35s ease both; }
       @media (max-width: 500px) {
         .lb-stats { display: none; }
         .lb-podium { gap: 8px; }
