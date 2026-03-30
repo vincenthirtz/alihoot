@@ -46,6 +46,19 @@ const screens = {
 function showScreen(name) {
   Object.values(screens).forEach((s) => s.classList.remove('active'));
   screens[name].classList.add('active');
+
+  // Only show live preview panel on create screen
+  const livePanel = document.getElementById('live-preview-panel');
+  const showBtn = document.getElementById('live-preview-show-btn');
+  if (livePanel) {
+    if (name === 'create') {
+      livePanel.style.display = '';
+      if (showBtn) showBtn.style.display = '';
+    } else {
+      livePanel.style.display = 'none';
+      if (showBtn) showBtn.style.display = 'none';
+    }
+  }
 }
 
 // ========== SOUND & THEME TOGGLES ==========
