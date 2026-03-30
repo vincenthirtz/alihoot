@@ -125,6 +125,7 @@ export interface Room {
   _pausedRemaining?: number;
   training?: boolean;
   _trainingTimers?: ReturnType<typeof setTimeout>[];
+  lastActivity: number;
 }
 
 export interface LeaderboardEntry {
@@ -160,6 +161,7 @@ export interface GameHistoryData {
   questionCount: number;
   rankings: LeaderboardEntry[];
   startedAt: string;
+  dashboard?: Dashboard | null;
 }
 
 export interface QuestionStats {

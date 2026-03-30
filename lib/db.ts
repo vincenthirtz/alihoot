@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { GameHistoryData, Question } from './types';
+import log from './logger';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
@@ -45,12 +46,12 @@ export async function saveQuiz(
       .select();
 
     if (error) {
-      console.error('DB saveQuiz error:', error.message);
+      log.error({ err: error.message }, 'DB saveQuiz error');
       return null;
     }
     return data;
   } catch (e) {
-    console.error('DB saveQuiz exception:', (e as Error).message);
+    log.error({ err: (e as Error).message }, 'DB saveQuiz exception');
     return null;
   }
 }
@@ -67,12 +68,12 @@ export async function listQuizzes(limit = 50) {
       .limit(limit);
 
     if (error) {
-      console.error('DB listQuizzes error:', error.message);
+      log.error({ err: error.message }, 'DB listQuizzes error');
       return [];
     }
     return data || [];
   } catch (e) {
-    console.error('DB listQuizzes exception:', (e as Error).message);
+    log.error({ err: (e as Error).message }, 'DB listQuizzes exception');
     return [];
   }
 }
@@ -119,18 +120,19 @@ export async function saveGameHistory(gameData: GameHistoryData) {
         player_count: gameData.playerCount,
         question_count: gameData.questionCount,
         rankings: gameData.rankings,
+        dashboard: gameData.dashboard || null,
         started_at: gameData.startedAt,
         ended_at: new Date().toISOString(),
       })
       .select();
 
     if (error) {
-      console.error('DB saveGameHistory error:', error.message);
+      log.error({ err: error.message }, 'DB saveGameHistory error');
       return null;
     }
     return data;
   } catch (e) {
-    console.error('DB saveGameHistory exception:', (e as Error).message);
+    log.error({ err: (e as Error).message }, 'DB saveGameHistory exception');
     return null;
   }
 }
@@ -147,12 +149,12 @@ export async function getGameHistory(limit = 50) {
       .limit(limit);
 
     if (error) {
-      console.error('DB getGameHistory error:', error.message);
+      log.error({ err: error.message }, 'DB getGameHistory error');
       return [];
     }
     return data || [];
   } catch (e) {
-    console.error('DB getGameHistory exception:', (e as Error).message);
+    log.error({ err: (e as Error).message }, 'DB getGameHistory exception');
     return [];
   }
 }
@@ -179,7 +181,7 @@ export async function registerPlayer(
         .select()
         .single();
       if (error) {
-        console.error('DB updatePlayer error:', error.message);
+        log.error({ err: error.message }, 'DB updatePlayer error');
         return existing;
       }
       return data;
@@ -193,12 +195,12 @@ export async function registerPlayer(
       .single();
 
     if (error) {
-      console.error('DB registerPlayer error:', error.message);
+      log.error({ err: error.message }, 'DB registerPlayer error');
       return null;
     }
     return data;
   } catch (e) {
-    console.error('DB registerPlayer exception:', (e as Error).message);
+    log.error({ err: (e as Error).message }, 'DB registerPlayer exception');
     return null;
   }
 }
@@ -250,7 +252,7 @@ export async function updatePlayerStats(
       })
       .eq('id', playerId);
   } catch (e) {
-    console.error('DB updatePlayerStats exception:', (e as Error).message);
+    log.error({ err: (e as Error).message }, 'DB updatePlayerStats exception');
   }
 }
 
@@ -259,17 +261,18 @@ export async function updatePlayerStats(
 export async function getLeaderboard(
   period: 'week' | 'month' | 'all' = 'all',
   limit = 50,
-): Promise<Array<{ id: number; nickname: string; avatar: object; games_played: number; total_score: number; best_streak: number }>> {
+  offset = 0,
+): Promise<{ players: Array<{ id: number; nickname: string; avatar: object; games_played: number; total_score: number; best_streak: number }>; total: number }> {
   const client = getClient();
-  if (!client) return [];
+  if (!client) return { players: [], total: 0 };
 
   try {
     let query = client
       .from('players')
-      .select('id, nickname, avatar, games_played, total_score, best_streak, created_at')
+      .select('id, nickname, avatar, games_played, total_score, best_streak, created_at', { count: 'exact' })
       .gt('games_played', 0)
       .order('total_score', { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
 
     if (period === 'week') {
       const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -279,15 +282,63 @@ export async function getLeaderboard(
       query = query.gte('last_seen', monthAgo);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
     if (error) {
-      console.error('DB getLeaderboard error:', error.message);
-      return [];
+      log.error({ err: error.message }, 'DB getLeaderboard error');
+      return { players: [], total: 0 };
     }
-    return data || [];
+    return { players: data || [], total: count || 0 };
   } catch (e) {
-    console.error('DB getLeaderboard exception:', (e as Error).message);
-    return [];
+    log.error({ err: (e as Error).message }, 'DB getLeaderboard exception');
+    return { players: [], total: 0 };
+  }
+}
+
+export async function countPlayerPodiums(playerId: number): Promise<number> {
+  const client = getClient();
+  if (!client) return 0;
+
+  try {
+    const { data, error } = await client
+      .from('game_history')
+      .select('rankings')
+      .order('ended_at', { ascending: false })
+      .limit(200);
+
+    if (error || !data) return 0;
+
+    let count = 0;
+    for (const game of data) {
+      const rankings = (game.rankings || []) as Array<{ playerId?: number; rank: number }>;
+      if (rankings.some((r) => r.playerId === playerId && r.rank <= 3)) count++;
+    }
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+export async function countPlayerWins(playerId: number): Promise<number> {
+  const client = getClient();
+  if (!client) return 0;
+
+  try {
+    const { data, error } = await client
+      .from('game_history')
+      .select('rankings')
+      .order('ended_at', { ascending: false })
+      .limit(200);
+
+    if (error || !data) return 0;
+
+    let count = 0;
+    for (const game of data) {
+      const rankings = (game.rankings || []) as Array<{ playerId?: number; rank: number }>;
+      if (rankings.some((r) => r.playerId === playerId && r.rank === 1)) count++;
+    }
+    return count;
+  } catch {
+    return 0;
   }
 }
 
@@ -308,7 +359,7 @@ export async function getPlayerGames(
       .limit(limit);
 
     if (error) {
-      console.error('DB getPlayerGames error:', error.message);
+      log.error({ err: error.message }, 'DB getPlayerGames error');
       return [];
     }
 
@@ -327,7 +378,7 @@ export async function getPlayerGames(
     }
     return results;
   } catch (e) {
-    console.error('DB getPlayerGames exception:', (e as Error).message);
+    log.error({ err: (e as Error).message }, 'DB getPlayerGames exception');
     return [];
   }
 }
@@ -365,11 +416,11 @@ export async function getPlayerProfile(
       };
     });
 
-    if (aErr) console.error('DB achievements error:', aErr.message);
+    if (aErr) log.error({ err: aErr.message }, 'DB achievements error');
 
     return { player, achievements: flatAchievements };
   } catch (e) {
-    console.error('DB getPlayerProfile exception:', (e as Error).message);
+    log.error({ err: (e as Error).message }, 'DB getPlayerProfile exception');
     return null;
   }
 }
@@ -406,7 +457,7 @@ export async function awardAchievement(playerId: number, achievementId: string):
       );
 
     if (error) {
-      console.error('DB awardAchievement error:', error.message);
+      log.error({ err: error.message }, 'DB awardAchievement error');
       return false;
     }
     return true;
@@ -450,28 +501,81 @@ export async function verifyToken(token: string): Promise<{ id: string; email: s
   }
 }
 
+// ========== GLOBAL STATS (SQL-based aggregation) ==========
+
+export async function getGlobalStats(): Promise<{
+  totalGames: number;
+  totalPlayers: number;
+  avgPlayersPerGame: number;
+  avgQuestionsPerGame: number;
+  topQuizzes: Array<{ quiz_title: string; count: number }>;
+} | null> {
+  const client = getClient();
+  if (!client) return null;
+
+  try {
+    // Aggregate game stats
+    const { data: gameStats, error: gErr } = await client
+      .from('game_history')
+      .select('player_count, question_count, quiz_title');
+
+    if (gErr || !gameStats) return null;
+
+    const totalGames = gameStats.length;
+    const totalPlayerSum = gameStats.reduce((s, g) => s + (g.player_count || 0), 0);
+    const totalQuestionSum = gameStats.reduce((s, g) => s + (g.question_count || 0), 0);
+
+    // Count quiz popularity
+    const quizCounts: Record<string, number> = {};
+    for (const g of gameStats) {
+      const title = g.quiz_title || 'Sans titre';
+      quizCounts[title] = (quizCounts[title] || 0) + 1;
+    }
+    const topQuizzes = Object.entries(quizCounts)
+      .map(([quiz_title, count]) => ({ quiz_title, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Total registered players
+    const { count: totalPlayers } = await client
+      .from('players')
+      .select('id', { count: 'exact', head: true })
+      .gt('games_played', 0);
+
+    return {
+      totalGames,
+      totalPlayers: totalPlayers || 0,
+      avgPlayersPerGame: totalGames > 0 ? Math.round((totalPlayerSum / totalGames) * 10) / 10 : 0,
+      avgQuestionsPerGame: totalGames > 0 ? Math.round((totalQuestionSum / totalGames) * 10) / 10 : 0,
+      topQuizzes,
+    };
+  } catch (e) {
+    log.error({ err: (e as Error).message }, 'DB getGlobalStats exception');
+    return null;
+  }
+}
+
 // ========== INIT (create tables if needed) ==========
 
 export async function initTables() {
   const client = getClient();
   if (!client) {
-    console.log('  [DB] Supabase non configure - mode memoire uniquement');
+    log.info('Supabase not configured — memory-only mode');
     return;
   }
 
   try {
     const { error } = await client.from('quizzes').select('id').limit(1);
     if (error && error.code === '42P01') {
-      console.log('  [DB] Tables non trouvees. Executez le script SQL dans Supabase Dashboard :');
-      console.log('  [DB] Voir le fichier setup-db.sql');
+      log.warn('Tables not found. Run setup-db.sql in Supabase Dashboard');
       return;
     }
     if (error) {
-      console.log(`  [DB] Erreur connexion Supabase: ${error.message}`);
+      log.error({ err: error.message }, 'Supabase connection error');
       return;
     }
-    console.log('  [DB] Supabase connecte');
+    log.info('Supabase connected');
   } catch (e) {
-    console.log(`  [DB] Erreur Supabase: ${(e as Error).message}`);
+    log.error({ err: (e as Error).message }, 'Supabase init error');
   }
 }

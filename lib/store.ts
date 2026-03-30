@@ -7,6 +7,7 @@ import {
   generateAvatar,
 } from './utils';
 import * as redis from './redis';
+import log from './logger';
 
 // ========== LIMITS ==========
 
@@ -23,7 +24,7 @@ export const LIMITS = {
   MAX_ROOMS: 100,
 } as const;
 import * as db from './db';
-import { Quiz, Question, Room, Avatar, LeaderboardEntry, AnswerResult, Reaction } from './types';
+import { Quiz, Question, Room, Avatar, LeaderboardEntry, AnswerResult, Reaction, Dashboard } from './types';
 
 interface RawQuestionInput {
   text: string;
@@ -157,10 +158,10 @@ export function createQuiz(
   db.saveQuiz(id, quizzes[id].title, quizzes[id].questions, {
     shuffleQuestions: quizzes[id].shuffleQuestions,
     shuffleChoices: quizzes[id].shuffleChoices,
-  }).catch(() => {});
+  }).catch((e) => log.error({ err: e, quizId: id }, 'Failed to save quiz to DB'));
 
   // Cache in Redis
-  redis.cacheQuiz(id, quizzes[id]).catch(() => {});
+  redis.cacheQuiz(id, quizzes[id]).catch((e) => log.warn({ err: e, quizId: id }, 'Failed to cache quiz in Redis'));
 
   return id;
 }
@@ -188,6 +189,7 @@ export function createRoom(quizId: string, adminSocketId: string): Room | null {
     fingerprints: new Set(),
     spectators: {},
     gameStartedAt: null,
+    lastActivity: Date.now(),
   };
   return rooms[pin];
 }
@@ -215,7 +217,7 @@ export async function ensureQuizLoaded(quizId: string): Promise<Quiz | null> {
   };
 
   // Cache for next time
-  redis.cacheQuiz(quizId, quizzes[quizId]).catch(() => {});
+  redis.cacheQuiz(quizId, quizzes[quizId]).catch((e) => log.warn({ err: e, quizId }, 'Failed to cache quiz in Redis'));
 
   return quizzes[quizId];
 }
@@ -247,6 +249,7 @@ export function createTrainingRoom(
     spectators: {},
     gameStartedAt: null,
     training: true,
+    lastActivity: Date.now(),
   };
 
   rooms[pin].players[socketId] = {
@@ -337,6 +340,7 @@ export function addPlayer(
     playerId: playerId || null,
   };
 
+  room.lastActivity = Date.now();
   return { success: true, players: getPlayerList(pin), avatar };
 }
 
@@ -475,6 +479,7 @@ export function recordAnswer(
   player.score += points;
   player.answers.push({ questionIndex, answerIndex, responseTime, correct, points });
   room.answeredCount++;
+  room.lastActivity = Date.now();
 
   const result: AnswerResult = { correct, points };
   if (question.type === 'slider') {
@@ -675,9 +680,9 @@ export function deleteRoom(pin: string): void {
 
 // ========== GAME HISTORY ==========
 
-export function saveGameHistory(pin: string): void {
+export async function saveGameHistory(pin: string, dashboard?: Dashboard | null): Promise<Record<string, string[]>> {
   const room = rooms[pin];
-  if (!room) return;
+  if (!room) return {};
 
   const quiz = quizzes[room.quizId];
   const rankings = getLeaderboard(pin);
@@ -690,58 +695,107 @@ export function saveGameHistory(pin: string): void {
     questionCount: quiz ? quiz.questions.length : 0,
     rankings,
     startedAt: room.gameStartedAt || new Date().toISOString(),
-  }).catch(() => {});
+    dashboard: dashboard || null,
+  }).catch((e) => log.error({ err: e, pin }, 'Failed to save game history'));
 
   // Update registered players stats + check achievements
-  for (const player of Object.values(room.players)) {
-    if (player.playerId) {
-      db.updatePlayerStats(player.playerId, player.score, player.streak).catch(() => {});
-      checkAchievements(player.playerId, player, rankings).catch(() => {});
-    }
-  }
+  // Maps socketId → list of newly unlocked achievement IDs
+  const newAchievements: Record<string, string[]> = {};
+
+  const entries = Object.entries(room.players).filter(([, p]) => p.playerId);
+  await Promise.all(
+    entries.map(async ([socketId, player]) => {
+      if (!player.playerId) return;
+      // Wait for stats update before checking achievements
+      await db.updatePlayerStats(player.playerId, player.score, player.streak);
+      const unlocked = await checkAchievements(player.playerId, player, rankings);
+      if (unlocked.length > 0) {
+        newAchievements[socketId] = unlocked;
+      }
+    }),
+  );
+
+  return newAchievements;
 }
 
 async function checkAchievements(
   playerId: number,
   player: { score: number; streak: number; answers: { correct: boolean }[] },
   rankings: LeaderboardEntry[],
-): Promise<void> {
+): Promise<string[]> {
   const existing = await db.getPlayerAchievementIds(playerId);
   const has = (id: string) => existing.includes(id);
-  const award = (id: string) => {
-    if (!has(id)) db.awardAchievement(playerId, id).catch(() => {});
+  const newlyUnlocked: string[] = [];
+
+  const award = async (id: string) => {
+    if (!has(id)) {
+      const ok = await db.awardAchievement(playerId, id);
+      if (ok) newlyUnlocked.push(id);
+    }
   };
 
-  // Fetch fresh stats (updatePlayerStats already ran)
+  // Fetch fresh stats (updatePlayerStats already completed)
   const profile = await db.getPlayerProfile(playerId).catch(() => null);
   const stats = profile?.player as { games_played: number; total_score: number; best_streak: number } | null;
 
-  if (!stats) return;
+  if (!stats) return [];
 
   // Games played
-  if (stats.games_played >= 1) award('first_game');
-  if (stats.games_played >= 5) award('games_5');
-  if (stats.games_played >= 10) award('games_10');
-  if (stats.games_played >= 25) award('games_25');
+  if (stats.games_played >= 1) await award('first_game');
+  if (stats.games_played >= 5) await award('games_5');
+  if (stats.games_played >= 10) await award('games_10');
+  if (stats.games_played >= 25) await award('games_25');
 
   // Streak (best ever, already updated in DB)
-  if (stats.best_streak >= 3) award('streak_3');
-  if (stats.best_streak >= 5) award('streak_5');
-  if (stats.best_streak >= 10) award('streak_10');
+  if (stats.best_streak >= 3) await award('streak_3');
+  if (stats.best_streak >= 5) await award('streak_5');
+  if (stats.best_streak >= 10) await award('streak_10');
 
   // Score this game
-  if (player.score >= 5000) award('score_5000');
-  if (player.score >= 10000) award('score_10000');
+  if (player.score >= 5000) await award('score_5000');
+  if (player.score >= 10000) await award('score_10000');
 
   // Podium / victory
   const playerRanking = rankings.find((r) => r.playerId === playerId);
   if (playerRanking && playerRanking.rank <= 3) {
-    award('podium_1');
-    // Count total podiums from game history for podium_3
+    await award('podium_1');
+    // Count total podiums across all games
+    const podiumCount = await db.countPlayerPodiums(playerId);
+    if (podiumCount >= 3) await award('podium_3');
   }
   if (playerRanking && playerRanking.rank === 1) {
-    award('winner_1');
+    await award('winner_1');
+    // Count total wins across all games
+    const winCount = await db.countPlayerWins(playerId);
+    if (winCount >= 5) await award('winner_5');
   }
+
+  return newlyUnlocked;
+}
+
+// ========== ROOM GARBAGE COLLECTOR ==========
+
+const ROOM_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const GC_INTERVAL_MS = 10 * 60 * 1000;  // check every 10 min
+
+export function startRoomGC(): void {
+  setInterval(() => {
+    const now = Date.now();
+    let cleaned = 0;
+    for (const pin in rooms) {
+      const room = rooms[pin];
+      if (now - room.lastActivity > ROOM_TTL_MS) {
+        if (room.timer) clearInterval(room.timer);
+        if (room._trainingTimers) room._trainingTimers.forEach((t) => clearTimeout(t));
+        delete rooms[pin];
+        cleaned++;
+      }
+    }
+    if (cleaned > 0) {
+      log.info({ cleaned, remaining: Object.keys(rooms).length }, 'Room GC: cleaned stale rooms');
+    }
+  }, GC_INTERVAL_MS);
+  log.info({ ttlMinutes: ROOM_TTL_MS / 60000, intervalMinutes: GC_INTERVAL_MS / 60000 }, 'Room GC started');
 }
 
 // ========== PLAYER RECONNECTION ==========

@@ -1249,6 +1249,46 @@ function renderFinalLeaderboard(rankings) {
   }
 }
 
+// ========== ACHIEVEMENTS ==========
+
+const ACHIEVEMENT_META = {
+  first_game: { icon: '🎮', label: 'Première partie' },
+  games_5: { icon: '🎯', label: 'Habitué' },
+  games_10: { icon: '🏅', label: 'Vétéran' },
+  games_25: { icon: '🔥', label: 'Accro' },
+  streak_3: { icon: '⚡', label: 'En série' },
+  streak_5: { icon: '💥', label: 'Inarrêtable' },
+  streak_10: { icon: '🌟', label: 'Parfait' },
+  score_5000: { icon: '📈', label: 'Bon score' },
+  score_10000: { icon: '💎', label: 'Expert' },
+  podium_1: { icon: '🏆', label: 'Premier podium' },
+  podium_3: { icon: '👑', label: 'Habitué du podium' },
+  winner_1: { icon: '🥇', label: 'Première victoire' },
+  winner_5: { icon: '🏆', label: 'Champion' },
+};
+
+socket.on('achievement:unlocked', ({ achievements }) => {
+  const container = document.getElementById('achievement-toasts');
+  if (!container) return;
+
+  achievements.forEach((id, i) => {
+    const meta = ACHIEVEMENT_META[id] || { icon: '🏅', label: id };
+    const toast = document.createElement('div');
+    toast.className = 'achievement-toast';
+    toast.style.animationDelay = `${i * 0.6}s, ${3.6 + i * 0.6}s`;
+    toast.innerHTML = `
+      <div class="achievement-toast-icon">${meta.icon}</div>
+      <div class="achievement-toast-text">
+        <div class="achievement-toast-title">Succès débloqué !</div>
+        <div>${meta.label}</div>
+      </div>`;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 4500 + i * 600);
+  });
+
+  AudioSystem.play('correct');
+});
+
 // ========== PAUSE ==========
 
 socket.on('game:paused', () => {

@@ -9,6 +9,7 @@ import * as store from './lib/store';
 import * as game from './lib/game';
 import * as db from './lib/db';
 import * as redis from './lib/redis';
+import log from './lib/logger';
 
 const app = express();
 const server = http.createServer(app);
@@ -170,8 +171,10 @@ app.get('/api/leaderboard', async (req, res) => {
   const period = (req.query.period as string) || 'all';
   const validPeriods = ['week', 'month', 'all'];
   const safePeriod = validPeriods.includes(period) ? (period as 'week' | 'month' | 'all') : 'all';
-  const data = await db.getLeaderboard(safePeriod);
-  res.json(data);
+  const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100);
+  const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
+  const { players, total } = await db.getLeaderboard(safePeriod, limit, offset);
+  res.json({ players, total, limit, offset });
 });
 
 // Public: player profile + achievements
@@ -195,6 +198,13 @@ app.get('/api/players/:id/games', async (req, res) => {
 app.get('/api/achievements', async (_req, res) => {
   const achievements = await db.getAchievements();
   res.json(achievements);
+});
+
+// Public: global aggregated stats (SQL-based)
+app.get('/api/stats', async (_req, res) => {
+  const stats = await db.getGlobalStats();
+  if (!stats) return res.json({ totalGames: 0, totalPlayers: 0, avgPlayersPerGame: 0, avgQuestionsPerGame: 0, topQuizzes: [] });
+  res.json(stats);
 });
 
 // ========== RATE LIMITING ==========
@@ -260,7 +270,7 @@ function requireSocketAdmin(socket: RateLimitedSocket, cb: () => void): void {
 
 // Socket.IO
 io.on('connection', (socket: RateLimitedSocket) => {
-  console.log(`Connected: ${socket.id}`);
+  log.debug({ socketId: socket.id }, 'Socket connected');
 
   // Admin authentication via token
   socket.on('admin:auth', async ({ token }: { token: string }) => {
@@ -278,7 +288,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
 
     socket._adminAuth = true;
     socket.emit('admin:auth-ok');
-    console.log(`Admin authenticated: ${user.email} (${socket.id})`);
+    log.info({ email: user.email, socketId: socket.id }, 'Admin authenticated');
   });
 
   // ========== ADMIN EVENTS ==========
@@ -377,7 +387,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
       }
       socket.join(`room:${room.pin}`);
       socket.emit('admin:room-created', { pin: room.pin, adminToken: room.adminToken });
-      console.log(`Room created: ${room.pin} by ${socket.id}`);
+      log.info({ pin: room.pin, socketId: socket.id }, 'Room created');
     }),
   );
 
@@ -396,7 +406,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
         currentQuestionIndex: room.currentQuestionIndex,
         quiz: store.getQuiz(room.quizId),
       });
-      console.log(`Admin reconnected to room ${pin}`);
+      log.info({ pin }, 'Admin reconnected');
     }),
   );
 
@@ -407,7 +417,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
       if (store.getPlayerCount(pin) === 0) return;
 
       game.startGame(pin, io);
-      console.log(`Game started: ${pin}`);
+      log.info({ pin }, 'Game started');
     }),
   );
 
@@ -441,7 +451,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
       if (result) {
         io.to(result.socketId).emit('player:kicked');
         io.to(`room:${pin}`).emit('room:player-joined', { players: result.players });
-        console.log(`Kicked ${nickname} from room ${pin}`);
+        log.info({ pin, nickname }, 'Player kicked');
       }
     }),
   );
@@ -476,7 +486,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
         nickname: player.nickname,
         avatar: player.avatar,
       });
-      console.log(`Player registered: ${player.email} (${player.nickname})`);
+      log.info({ email: player.email, nickname: player.nickname }, 'Player registered');
     },
   );
 
@@ -513,7 +523,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
             avatar: result.avatar,
             state: result.state,
           });
-          console.log(`Spectator joined: ${result.nickname} -> room ${pin}`);
+          log.info({ nickname: result.nickname, pin }, 'Spectator joined');
           return;
         }
 
@@ -526,7 +536,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
           state: result.state,
         });
         io.to(`room:${pin}`).emit('room:player-joined', { players: result.players });
-        console.log(`Player joined: ${nickname} -> room ${pin}`);
+        log.info({ nickname, pin }, 'Player joined');
       }),
   );
 
@@ -547,7 +557,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
     io.to(`room:${pin}`).emit('room:player-joined', {
       players: store.getPlayerList(pin),
     });
-    console.log(`Player reconnected: ${result.nickname} -> room ${pin}`);
+    log.info({ nickname: result.nickname, pin }, 'Player reconnected');
   });
 
   socket.on(
@@ -611,7 +621,7 @@ io.on('connection', (socket: RateLimitedSocket) => {
       // Auto-start after brief delay
       setTimeout(() => {
         game.startGame(room.pin, io);
-        console.log(`Training started: ${room.pin} by ${nickname}`);
+        log.info({ pin: room.pin, nickname }, 'Training started');
       }, 1000);
     },
   );
@@ -623,11 +633,11 @@ io.on('connection', (socket: RateLimitedSocket) => {
     if (info) {
       if (info.isAdmin) {
         io.to(`room:${info.pin}`).emit('game:host-disconnected');
-        console.log(`Admin disconnected from room ${info.pin}`);
+        log.info({ pin: info.pin }, 'Admin disconnected');
       } else {
         const players = store.getPlayerList(info.pin);
         io.to(`room:${info.pin}`).emit('room:player-joined', { players });
-        console.log(`Player disconnected from room ${info.pin}`);
+        log.debug({ pin: info.pin }, 'Player disconnected');
       }
     }
   });
@@ -635,16 +645,14 @@ io.on('connection', (socket: RateLimitedSocket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, async () => {
-  console.log(`\n  🎮 Alihoot! est lancé sur http://localhost:${PORT}`);
-  console.log(`  📱 Joueurs : http://localhost:${PORT}`);
-  console.log(`  👑 Admin   : http://localhost:${PORT}/admin`);
-  console.log(`  📊 Historique : http://localhost:${PORT}/admin/history`);
+  log.info({ port: PORT }, 'Alihoot! server started');
+  log.info({ url: `http://localhost:${PORT}` }, 'Players URL');
+  log.info({ url: `http://localhost:${PORT}/admin` }, 'Admin URL');
   await db.initTables();
   if (process.env.REDIS_URL) {
     redis.getClient();
-    console.log('  🔴 Redis connecté');
+    log.info('Redis connected');
   }
-  console.log('');
 
   // Keep-alive: self-ping every 14 min to prevent Render free tier from sleeping
   if (process.env.RENDER_EXTERNAL_URL) {
@@ -653,13 +661,16 @@ server.listen(PORT, async () => {
       async () => {
         try {
           await fetch(keepAliveUrl);
-          console.log('[keep-alive] ping ok');
-        } catch {
-          console.log('[keep-alive] ping failed');
+          log.debug('Keep-alive ping ok');
+        } catch (e) {
+          log.warn({ err: e }, 'Keep-alive ping failed');
         }
       },
       14 * 60 * 1000,
-    ); // every 14 minutes
-    console.log(`  🏓 Keep-alive activé (ping toutes les 14 min)`);
+    );
+    log.info('Keep-alive enabled (every 14 min)');
   }
+
+  // Room garbage collector: clean up stale rooms every 10 min
+  store.startRoomGC();
 });

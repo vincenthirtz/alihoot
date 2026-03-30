@@ -194,3 +194,57 @@
 
 .kicked-overlay .kicked-icon { font-size: 4rem; margin-bottom: 20px; }
 .kicked-overlay .kicked-text { font-size: 1.5rem; font-weight: 800; }
+
+/* Achievement toasts */
+.achievement-toasts {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.achievement-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #ffd700, #ff8c00);
+  color: #1a1a2e;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.95rem;
+  box-shadow: 0 6px 24px rgba(255, 215, 0, 0.4);
+  animation: achievement-in 0.5s ease, achievement-out 0.4s ease 3.6s forwards;
+  pointer-events: auto;
+}
+
+.achievement-toast-icon {
+  font-size: 1.6rem;
+}
+
+.achievement-toast-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.achievement-toast-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+@keyframes achievement-in {
+  from { opacity: 0; transform: translateX(80px) scale(0.8); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes achievement-out {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(80px); }
+}

@@ -1,6 +1,7 @@
 import * as store from './store';
 import { Server } from 'socket.io';
 import { Dashboard, QuestionStats } from './types';
+import log from './logger';
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -257,7 +258,12 @@ function endGame(pin: string, io: Server): void {
   io.to(`room:${pin}`).emit('game:finished', { podium, rankings, dashboard });
   io.to(`room:${pin}`).emit('audio:play', { sound: 'victory' });
 
-  store.saveGameHistory(pin);
+  store.saveGameHistory(pin, dashboard).then((newAchievements) => {
+    // Notify each player of their newly unlocked achievements
+    for (const [socketId, achievementIds] of Object.entries(newAchievements)) {
+      io.to(socketId).emit('achievement:unlocked', { achievements: achievementIds });
+    }
+  }).catch((e) => log.error({ err: e, pin }, 'Failed to process achievements after game end'));
 
   // Training mode: auto-cleanup after 60s
   if (room.training) {

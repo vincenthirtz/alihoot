@@ -96,3 +96,6 @@ INSERT INTO achievements (id, title, description, icon, category) VALUES
   ('winner_1', 'Premiere victoire', 'Gagner une partie', '🥇', 'victory'),
   ('winner_5', 'Champion', 'Gagner 5 parties', '🏆', 'victory')
 ON CONFLICT (id) DO NOTHING;
+
+-- Migration: add dashboard column to game_history (run once if table already exists)
+-- ALTER TABLE game_history ADD COLUMN IF NOT EXISTS dashboard JSONB;

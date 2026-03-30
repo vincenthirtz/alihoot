@@ -1,4 +1,5 @@
 import Redis from 'ioredis';
+import log from './logger';
 
 let client: Redis | null = null;
 
@@ -18,16 +19,16 @@ export function getClient(): Redis | null {
     });
 
     client.on('error', (err) => {
-      console.error('[redis] Connection error:', err.message);
+      log.error({ err: err.message }, 'Redis connection error');
     });
 
     client.on('connect', () => {
-      console.log('[redis] Connected');
+      log.info('Redis connected');
     });
 
     return client;
   } catch (e) {
-    console.error('[redis] Failed to initialize:', e);
+    log.error({ err: e }, 'Redis failed to initialize');
     return null;
   }
 }
@@ -48,7 +49,7 @@ export async function cacheQuiz(id: string, quiz: unknown): Promise<void> {
     await redis.set(QUIZ_PREFIX + id, JSON.stringify(quiz), 'EX', QUIZ_TTL);
     await redis.sadd(QUIZ_LIST_KEY, id);
   } catch (e) {
-    console.error('[redis] cacheQuiz error:', e);
+    log.error({ err: e }, 'Redis cacheQuiz error');
   }
 }
 
@@ -59,7 +60,7 @@ export async function getCachedQuiz(id: string): Promise<unknown | null> {
     const data = await redis.get(QUIZ_PREFIX + id);
     return data ? JSON.parse(data) : null;
   } catch (e) {
-    console.error('[redis] getCachedQuiz error:', e);
+    log.error({ err: e }, 'Redis getCachedQuiz error');
     return null;
   }
 }
@@ -71,7 +72,7 @@ export async function deleteCachedQuiz(id: string): Promise<void> {
     await redis.del(QUIZ_PREFIX + id);
     await redis.srem(QUIZ_LIST_KEY, id);
   } catch (e) {
-    console.error('[redis] deleteCachedQuiz error:', e);
+    log.error({ err: e }, 'Redis deleteCachedQuiz error');
   }
 }
 
@@ -84,7 +85,7 @@ export async function saveRoomSnapshot(pin: string, state: Record<string, unknow
   try {
     await redis.set(ROOM_PREFIX + pin, JSON.stringify(state), 'EX', 3600); // 1h TTL
   } catch (e) {
-    console.error('[redis] saveRoomSnapshot error:', e);
+    log.error({ err: e }, 'Redis saveRoomSnapshot error');
   }
 }
 
@@ -95,7 +96,7 @@ export async function getRoomSnapshot(pin: string): Promise<Record<string, unkno
     const data = await redis.get(ROOM_PREFIX + pin);
     return data ? JSON.parse(data) : null;
   } catch (e) {
-    console.error('[redis] getRoomSnapshot error:', e);
+    log.error({ err: e }, 'Redis getRoomSnapshot error');
     return null;
   }
 }
@@ -106,6 +107,6 @@ export async function deleteRoomSnapshot(pin: string): Promise<void> {
   try {
     await redis.del(ROOM_PREFIX + pin);
   } catch (e) {
-    console.error('[redis] deleteRoomSnapshot error:', e);
+    log.error({ err: e }, 'Redis deleteRoomSnapshot error');
   }
 }
