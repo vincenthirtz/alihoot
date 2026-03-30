@@ -95,10 +95,25 @@ function getSavedQuizzes() {
   }
 }
 
-function saveQuizToLocal(title, questions) {
+function saveQuizToLocal(title, questions, options = {}) {
   const saved = getSavedQuizzes();
-  saved.unshift({ title, questions, savedAt: Date.now() });
-  if (saved.length > 20) saved.length = 20;
+  const entry = {
+    title,
+    questions,
+    tags: options.tags || currentTags,
+    shuffleQuestions: options.shuffleQuestions || false,
+    shuffleChoices: options.shuffleChoices || false,
+    draft: options.draft || false,
+    savedAt: Date.now(),
+  };
+  // Update existing with same title or prepend
+  const existingIdx = saved.findIndex((q) => q.title === title);
+  if (existingIdx >= 0) {
+    saved[existingIdx] = entry;
+  } else {
+    saved.unshift(entry);
+  }
+  if (saved.length > 30) saved.length = 30;
   localStorage.setItem('alihoot-saved-quizzes', JSON.stringify(saved));
   renderSavedQuizzes();
 }
@@ -119,6 +134,22 @@ function loadSavedQuiz(index) {
   document.getElementById('questions-list').innerHTML = '';
   questionCount = 0;
   quiz.questions.forEach((q) => addQuestion(q));
+  if (quiz.shuffleQuestions) document.getElementById('shuffle-questions').checked = true;
+  if (quiz.shuffleChoices) document.getElementById('shuffle-choices').checked = true;
+  // Restore tags
+  currentTags = quiz.tags || [];
+  renderTags();
+}
+
+function duplicateSavedQuiz(index) {
+  const saved = getSavedQuizzes();
+  const quiz = saved[index];
+  if (!quiz) return;
+  saveQuizToLocal(quiz.title + ' (copie)', quiz.questions, {
+    tags: quiz.tags || [],
+    shuffleQuestions: quiz.shuffleQuestions,
+    shuffleChoices: quiz.shuffleChoices,
+  });
 }
 
 function renderSavedQuizzes() {
@@ -132,21 +163,144 @@ function renderSavedQuizzes() {
   }
   section.style.display = 'block';
 
-  list.innerHTML = saved
-    .map(
-      (q, i) =>
-        `<div class="saved-quiz-chip" onclick="loadSavedQuiz(${i})">
-      📝 ${q.title} (${q.questions.length}q)
-      <span class="delete-saved" onclick="event.stopPropagation(); deleteSavedQuiz(${i})">&times;</span>
-    </div>`,
-    )
+  const filteredSaved = activeFilter
+    ? saved.filter((q) => (q.tags || []).includes(activeFilter))
+    : saved;
+
+  list.innerHTML = filteredSaved
+    .map((q) => {
+      const realIdx = saved.indexOf(q);
+      const tagStr = (q.tags || []).map((t) => `<span class="quiz-tag-badge">${t}</span>`).join('');
+      const draftBadge = q.draft ? '<span class="draft-badge">brouillon</span>' : '';
+      return `<div class="saved-quiz-chip" onclick="loadSavedQuiz(${realIdx})">
+        📝 ${q.title} (${q.questions.length}q) ${draftBadge} ${tagStr}
+        <span class="quiz-chip-actions">
+          <span class="duplicate-saved" onclick="event.stopPropagation(); duplicateSavedQuiz(${realIdx})" title="Dupliquer">📋</span>
+          <span class="delete-saved" onclick="event.stopPropagation(); deleteSavedQuiz(${realIdx})">&times;</span>
+        </span>
+      </div>`;
+    })
     .join('');
+
+  // Build filter bar from all tags
+  renderFilterBar();
 }
 
 window.loadSavedQuiz = loadSavedQuiz;
 window.deleteSavedQuiz = deleteSavedQuiz;
+window.duplicateSavedQuiz = duplicateSavedQuiz;
+
+// ========== TAGS / CATEGORIES ==========
+
+let currentTags = [];
+let activeFilter = null;
+
+function addTag(tag) {
+  const clean = tag.trim();
+  if (!clean || currentTags.includes(clean)) return;
+  currentTags.push(clean);
+  renderTags();
+}
+
+function removeTag(tag) {
+  currentTags = currentTags.filter((t) => t !== tag);
+  renderTags();
+}
+
+function renderTags() {
+  const container = document.getElementById('category-tags');
+  container.innerHTML = currentTags
+    .map(
+      (t) =>
+        `<span class="tag-chip">${t} <span class="tag-remove" onclick="removeTagUI('${t}')">&times;</span></span>`,
+    )
+    .join('');
+}
+
+window.removeTagUI = function (tag) {
+  removeTag(tag);
+};
+
+document.getElementById('add-tag-btn').addEventListener('click', () => {
+  const input = document.getElementById('tag-input');
+  addTag(input.value);
+  input.value = '';
+});
+
+document.getElementById('tag-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    addTag(e.target.value);
+    e.target.value = '';
+  }
+});
+
+document.querySelectorAll('.tag-preset').forEach((btn) => {
+  btn.addEventListener('click', () => addTag(btn.dataset.tag));
+});
+
+function renderFilterBar() {
+  const allTags = new Set();
+  getSavedQuizzes().forEach((q) => (q.tags || []).forEach((t) => allTags.add(t)));
+
+  const filterBar = document.getElementById('filter-bar');
+  const filterTags = document.getElementById('filter-tags');
+
+  if (allTags.size === 0) {
+    filterBar.style.display = 'none';
+    return;
+  }
+
+  filterBar.style.display = 'block';
+  filterTags.innerHTML =
+    `<button class="filter-tag-btn${!activeFilter ? ' active' : ''}" onclick="setFilter(null)">Tous</button>` +
+    [...allTags]
+      .map(
+        (t) =>
+          `<button class="filter-tag-btn${activeFilter === t ? ' active' : ''}" onclick="setFilter('${t}')">${t}</button>`,
+      )
+      .join('');
+}
+
+window.setFilter = function (tag) {
+  activeFilter = tag;
+  renderSavedQuizzes();
+};
 
 renderSavedQuizzes();
+
+// ========== SAVE DRAFT ==========
+
+document.getElementById('save-draft-btn').addEventListener('click', () => {
+  const title = document.getElementById('quiz-title').value.trim();
+  const errorEl = document.getElementById('create-error');
+
+  if (!title) {
+    errorEl.textContent = 'Donne un titre au quiz';
+    return;
+  }
+
+  const blocks = document.querySelectorAll('.question-block');
+  const questions = Array.from(blocks).map((block) => getQuestionDataFromBlock(block));
+
+  saveQuizToLocal(title, questions, {
+    tags: currentTags,
+    shuffleQuestions: document.getElementById('shuffle-questions').checked,
+    shuffleChoices: document.getElementById('shuffle-choices').checked,
+    draft: true,
+  });
+
+  errorEl.textContent = '';
+  // Brief confirmation
+  const btn = document.getElementById('save-draft-btn');
+  const original = btn.textContent;
+  btn.textContent = '✓ Sauvegardé !';
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.disabled = false;
+  }, 1500);
+});
 
 // ========== CLOUD QUIZZES (Supabase) ==========
 
@@ -172,7 +326,10 @@ async function loadCloudQuizzes() {
         const qCount = q.questions ? q.questions.length : 0;
         return `<div class="saved-quiz-chip" onclick="loadCloudQuiz('${q.id}')">
         ☁️ ${q.title} (${qCount}q - ${date})
-        <span class="delete-saved" onclick="event.stopPropagation(); deleteCloudQuiz('${q.id}')">&times;</span>
+        <span class="quiz-chip-actions">
+          <span class="duplicate-saved" onclick="event.stopPropagation(); duplicateCloudQuiz('${q.id}')" title="Dupliquer">📋</span>
+          <span class="delete-saved" onclick="event.stopPropagation(); deleteCloudQuiz('${q.id}')">&times;</span>
+        </span>
       </div>`;
       })
       .join('');
@@ -195,6 +352,23 @@ window.loadCloudQuiz = async function (id) {
     if (quiz.shuffle_choices) document.getElementById('shuffle-choices').checked = true;
   } catch (e) {
     console.error('Failed to load cloud quiz:', e);
+  }
+};
+
+window.duplicateCloudQuiz = async function (id) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/quizzes/${id}`);
+    const quiz = await res.json();
+    if (!quiz || !quiz.questions) return;
+
+    document.getElementById('quiz-title').value = quiz.title + ' (copie)';
+    document.getElementById('questions-list').innerHTML = '';
+    questionCount = 0;
+    quiz.questions.forEach((q) => addQuestion(q));
+    if (quiz.shuffle_questions) document.getElementById('shuffle-questions').checked = true;
+    if (quiz.shuffle_choices) document.getElementById('shuffle-choices').checked = true;
+  } catch (e) {
+    console.error('Failed to duplicate cloud quiz:', e);
   }
 };
 
@@ -840,11 +1014,17 @@ document.getElementById('create-quiz-btn').addEventListener('click', () => {
   if (!valid) return;
   errorEl.textContent = '';
 
-  // Save to localStorage
-  saveQuizToLocal(title, questions);
-
   const shuffleQuestions = document.getElementById('shuffle-questions').checked;
   const shuffleChoices = document.getElementById('shuffle-choices').checked;
+
+  // Save to localStorage (not as draft since we're launching)
+  saveQuizToLocal(title, questions, {
+    tags: currentTags,
+    shuffleQuestions,
+    shuffleChoices,
+    draft: false,
+  });
+
   socket.emit('admin:create-quiz', { title, questions, shuffleQuestions, shuffleChoices });
 });
 

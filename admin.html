@@ -84,6 +84,33 @@
           />
         </div>
 
+        <div class="input-group category-input">
+          <label>Catégorie / Tags</label>
+          <div class="category-picker">
+            <div class="category-tags" id="category-tags"></div>
+            <div class="category-input-row">
+              <input type="text" id="tag-input" class="input-field" placeholder="Ajouter un tag..." maxlength="30" style="flex:1; padding: 8px 12px; font-size: 0.85rem;" />
+              <button type="button" class="choice-action-btn" id="add-tag-btn">+</button>
+            </div>
+            <div class="category-presets" id="category-presets">
+              <button type="button" class="tag-preset" data-tag="Culture générale">Culture générale</button>
+              <button type="button" class="tag-preset" data-tag="Sciences">Sciences</button>
+              <button type="button" class="tag-preset" data-tag="Histoire">Histoire</button>
+              <button type="button" class="tag-preset" data-tag="Géographie">Géographie</button>
+              <button type="button" class="tag-preset" data-tag="Sport">Sport</button>
+              <button type="button" class="tag-preset" data-tag="Musique">Musique</button>
+              <button type="button" class="tag-preset" data-tag="Cinéma">Cinéma</button>
+              <button type="button" class="tag-preset" data-tag="Formation">Formation</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="filter-bar" id="filter-bar" style="display:none">
+          <label style="font-weight:700; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; color:var(--card-label);">Filtrer par tag :</label>
+          <div class="filter-tags" id="filter-tags"></div>
+        </div>
+
         <div id="questions-list" class="questions-list"></div>
 
         <button id="add-question-btn" class="add-question-btn">+ Ajouter une question</button>
@@ -108,9 +135,12 @@
         <button id="preview-btn" class="preview-btn" onclick="openPreview()">
           👁️ Aperçu joueur
         </button>
-        <button id="create-quiz-btn" class="create-quiz-btn">
-          Créer le quiz &amp; lancer la room
-        </button>
+        <div class="quiz-action-buttons">
+          <button id="save-draft-btn" class="btn btn-next btn-small">💾 Sauvegarder le brouillon</button>
+          <button id="create-quiz-btn" class="create-quiz-btn">
+            Créer le quiz &amp; lancer la room
+          </button>
+        </div>
         <div id="create-error" class="error-msg" style="text-align: center"></div>
       </div>
     </section>

@@ -457,7 +457,15 @@ body.dark .ordering-item .ordering-num {
   border-color: var(--purple);
 }
 
-.saved-quiz-chip .delete-saved {
+.saved-quiz-chip .quiz-chip-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.saved-quiz-chip .delete-saved,
+.saved-quiz-chip .duplicate-saved {
   font-size: 1rem;
   opacity: 0.5;
   cursor: pointer;
@@ -467,6 +475,142 @@ body.dark .ordering-item .ordering-num {
 .saved-quiz-chip .delete-saved:hover {
   opacity: 1;
   color: var(--red);
+}
+
+.saved-quiz-chip .duplicate-saved:hover {
+  opacity: 1;
+  color: var(--blue);
+}
+
+/* Tag badges on quiz chips */
+.quiz-tag-badge {
+  font-size: 0.65rem;
+  background: var(--purple);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.draft-badge {
+  font-size: 0.65rem;
+  background: var(--yellow);
+  color: #333;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+/* Category / Tag picker */
+.category-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.category-input-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.category-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--purple);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.tag-chip .tag-remove {
+  cursor: pointer;
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+.tag-chip .tag-remove:hover {
+  opacity: 1;
+}
+
+.category-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.tag-preset {
+  background: var(--card-input-bg);
+  border: 1px solid var(--card-border);
+  color: var(--card-label);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Montserrat', sans-serif;
+  transition: all 0.2s;
+}
+
+.tag-preset:hover {
+  border-color: var(--purple);
+  color: var(--purple);
+}
+
+/* Filter bar */
+.filter-bar {
+  margin-bottom: 15px;
+}
+
+.filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.filter-tag-btn {
+  background: var(--card-input-bg);
+  border: 2px solid var(--card-border);
+  color: var(--card-text);
+  padding: 4px 12px;
+  border-radius: 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Montserrat', sans-serif;
+  transition: all 0.2s;
+}
+
+.filter-tag-btn:hover {
+  border-color: var(--purple);
+}
+
+.filter-tag-btn.active {
+  background: var(--purple);
+  color: white;
+  border-color: var(--purple);
+}
+
+/* Quiz action buttons */
+.quiz-action-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.quiz-action-buttons .create-quiz-btn {
+  flex: 1;
 }
 
 .import-export-bar {

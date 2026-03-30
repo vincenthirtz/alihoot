@@ -6,7 +6,7 @@ export default defineConfig({
   publicDir: 'public',
   build: {
     outDir: 'dist/client',
-    emptyDirOnly: true,
+    emptyOutDir: true,
     rollupOptions: {
       input: {
         player: resolve(__dirname, 'index.html'),
