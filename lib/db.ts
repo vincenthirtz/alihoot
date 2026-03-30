@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { GameHistoryData, Question } from './types';
 import log from './logger';
+import { DB } from './config';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
@@ -56,7 +57,7 @@ export async function saveQuiz(
   }
 }
 
-export async function listQuizzes(limit = 50) {
+export async function listQuizzes(limit: number = DB.DEFAULT_QUIZ_LIST_LIMIT) {
   const client = getClient();
   if (!client) return [];
 
@@ -137,7 +138,7 @@ export async function saveGameHistory(gameData: GameHistoryData) {
   }
 }
 
-export async function getGameHistory(limit = 50) {
+export async function getGameHistory(limit: number = DB.DEFAULT_HISTORY_LIMIT) {
   const client = getClient();
   if (!client) return [];
 
@@ -260,7 +261,7 @@ export async function updatePlayerStats(
 
 export async function getLeaderboard(
   period: 'week' | 'month' | 'all' = 'all',
-  limit = 50,
+  limit: number = DB.DEFAULT_LEADERBOARD_LIMIT,
   offset = 0,
 ): Promise<{ players: Array<{ id: number; nickname: string; avatar: object; games_played: number; total_score: number; best_streak: number }>; total: number }> {
   const client = getClient();
@@ -275,10 +276,10 @@ export async function getLeaderboard(
       .range(offset, offset + limit - 1);
 
     if (period === 'week') {
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const weekAgo = new Date(Date.now() - DB.WEEK_MS).toISOString();
       query = query.gte('last_seen', weekAgo);
     } else if (period === 'month') {
-      const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const monthAgo = new Date(Date.now() - DB.MONTH_MS).toISOString();
       query = query.gte('last_seen', monthAgo);
     }
 
@@ -303,7 +304,7 @@ export async function countPlayerPodiums(playerId: number): Promise<number> {
       .from('game_history')
       .select('rankings')
       .order('ended_at', { ascending: false })
-      .limit(200);
+      .limit(DB.QUERY_SCAN_LIMIT);
 
     if (error || !data) return 0;
 
@@ -327,7 +328,7 @@ export async function countPlayerWins(playerId: number): Promise<number> {
       .from('game_history')
       .select('rankings')
       .order('ended_at', { ascending: false })
-      .limit(200);
+      .limit(DB.QUERY_SCAN_LIMIT);
 
     if (error || !data) return 0;
 

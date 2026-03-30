@@ -1,0 +1,18 @@
+@media (max-width: 600px) {
+  .logo { font-size: 2rem; }
+  .pin-display { font-size: 3rem; letter-spacing: 8px; }
+  .question-text { font-size: 1.2rem; }
+  .answer-grid { grid-template-columns: 1fr; }
+  .answer-btn { min-height: 65px; font-size: 1rem; padding: 16px 20px; }
+  .card { padding: 25px; margin: 10px; }
+  .podium-block { width: 90px; }
+  .podium-block.first { height: 150px; }
+  .podium-block.second { height: 110px; }
+  .podium-block.third { height: 80px; }
+  .timer-text { font-size: 2rem; }
+  .leaderboard-row { padding: 10px 15px; }
+  .stats-container { gap: 10px; height: 150px; }
+  .question-image { max-width: 90%; max-height: 180px; }
+  .reaction-btn { width: 42px; height: 42px; font-size: 1.4rem; }
+  .countdown-number { font-size: 6rem; }
+}

@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import log from './logger';
+import { REDIS } from './config';
 
 let client: Redis | null = null;
 
@@ -40,7 +41,7 @@ export function isAvailable(): boolean {
 // Quiz cache (persists across restarts)
 const QUIZ_PREFIX = 'alihoot:quiz:';
 const QUIZ_LIST_KEY = 'alihoot:quiz_ids';
-const QUIZ_TTL = 86400; // 24 hours
+const QUIZ_TTL = REDIS.QUIZ_TTL;
 
 export async function cacheQuiz(id: string, quiz: unknown): Promise<void> {
   const redis = getClient();
@@ -83,7 +84,7 @@ export async function saveRoomSnapshot(pin: string, state: Record<string, unknow
   const redis = getClient();
   if (!redis) return;
   try {
-    await redis.set(ROOM_PREFIX + pin, JSON.stringify(state), 'EX', 3600); // 1h TTL
+    await redis.set(ROOM_PREFIX + pin, JSON.stringify(state), 'EX', REDIS.ROOM_SNAPSHOT_TTL);
   } catch (e) {
     log.error({ err: e }, 'Redis saveRoomSnapshot error');
   }

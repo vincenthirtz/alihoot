@@ -1,0 +1,74 @@
+/* Card */
+.card {
+  background: var(--card-bg);
+  color: var(--card-text);
+  border-radius: var(--radius-lg);
+  padding: 40px;
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 500px;
+}
+
+/* Input */
+.input-group {
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.input-group label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--card-label);
+}
+
+.input-field {
+  width: 100%;
+  padding: 14px 18px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: 3px solid var(--card-border);
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color 0.2s;
+  color: var(--card-text);
+  background: var(--card-input-bg);
+}
+
+.input-field:focus {
+  border-color: var(--purple);
+}
+
+.input-field.pin-input {
+  font-size: 2rem;
+  text-align: center;
+  letter-spacing: 8px;
+  font-weight: 900;
+}
+
+/* Free text answer input */
+.freetext-input {
+  width: 100%;
+  max-width: 500px;
+  padding: 18px 24px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--white);
+  outline: none;
+  text-align: center;
+}
+
+.freetext-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+.freetext-input:focus {
+  border-color: var(--white);
+}

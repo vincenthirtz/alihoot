@@ -8,21 +8,9 @@ import {
 } from './utils';
 import * as redis from './redis';
 import log from './logger';
+import { LIMITS, SCORING, ROOM_GC } from './config';
 
-// ========== LIMITS ==========
-
-export const LIMITS = {
-  MAX_QUESTIONS: 50,
-  MAX_CHOICES: 8,
-  MAX_ITEMS: 10,
-  MAX_ACCEPTED_ANSWERS: 20,
-  MAX_TITLE_LENGTH: 100,
-  MAX_QUESTION_TEXT_LENGTH: 300,
-  MAX_CHOICE_LENGTH: 150,
-  MAX_EXPLANATION_LENGTH: 500,
-  MAX_NICKNAME_LENGTH: 20,
-  MAX_ROOMS: 100,
-} as const;
+export { LIMITS };
 import * as db from './db';
 import { Quiz, Question, Room, Avatar, LeaderboardEntry, AnswerResult, Reaction, Dashboard } from './types';
 
@@ -79,8 +67,8 @@ export function createQuiz(
       const base = {
         text: sanitize(q.text, LIMITS.MAX_QUESTION_TEXT_LENGTH),
         type: safeType as Question['type'],
-        timeLimit: Math.min(Math.max(Number(q.timeLimit) || 20, 5), 120),
-        pointsMultiplier: Math.min(Math.max(Number(q.pointsMultiplier) || 1, 1), 3),
+        timeLimit: Math.min(Math.max(Number(q.timeLimit) || LIMITS.DEFAULT_TIMELIMIT, LIMITS.MIN_TIMELIMIT), LIMITS.MAX_TIMELIMIT),
+        pointsMultiplier: Math.min(Math.max(Number(q.pointsMultiplier) || LIMITS.MIN_POINTS_MULTIPLIER, LIMITS.MIN_POINTS_MULTIPLIER), LIMITS.MAX_POINTS_MULTIPLIER),
         image: q.image ? sanitizeUrl(q.image) : null,
         video: q.video ? sanitizeUrl(q.video) : null,
         explanation: q.explanation ? sanitize(q.explanation, LIMITS.MAX_EXPLANATION_LENGTH) : null,
@@ -102,7 +90,7 @@ export function createQuiz(
           sliderStep: sStep,
           correctValue: correctVal,
           tolerance: tol,
-          unit: sanitize(q.unit || '', 20),
+          unit: sanitize(q.unit || '', LIMITS.MAX_UNIT_LENGTH),
         };
       } else if (safeType === 'ordering') {
         const items = (q.items || [])
@@ -465,11 +453,11 @@ export function recordAnswer(
   const multiplier = question.pointsMultiplier || 1;
   let points = 0;
   if (correct) {
-    points = Math.round(1000 * (1 - responseTime / timeLimit / 2));
-    points = Math.max(points, 500);
+    points = Math.round(SCORING.BASE_POINTS * (1 - responseTime / timeLimit / 2));
+    points = Math.max(points, SCORING.MIN_POINTS);
     player.streak++;
     if (player.streak > 1) {
-      points += Math.min(player.streak * 100, 500);
+      points += Math.min(player.streak * SCORING.STREAK_BONUS_PER_CORRECT, SCORING.STREAK_BONUS_CAP);
     }
     points = Math.round(points * multiplier);
   } else {
@@ -752,8 +740,8 @@ async function checkAchievements(
   if (stats.best_streak >= 10) await award('streak_10');
 
   // Score this game
-  if (player.score >= 5000) await award('score_5000');
-  if (player.score >= 10000) await award('score_10000');
+  if (player.score >= SCORING.ACHIEVEMENT_GOOD_SCORE) await award('score_5000');
+  if (player.score >= SCORING.ACHIEVEMENT_EXPERT_SCORE) await award('score_10000');
 
   // Podium / victory
   const playerRanking = rankings.find((r) => r.playerId === playerId);
@@ -775,16 +763,13 @@ async function checkAchievements(
 
 // ========== ROOM GARBAGE COLLECTOR ==========
 
-const ROOM_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
-const GC_INTERVAL_MS = 10 * 60 * 1000;  // check every 10 min
-
 export function startRoomGC(): void {
   setInterval(() => {
     const now = Date.now();
     let cleaned = 0;
     for (const pin in rooms) {
       const room = rooms[pin];
-      if (now - room.lastActivity > ROOM_TTL_MS) {
+      if (now - room.lastActivity > ROOM_GC.ROOM_TTL_MS) {
         if (room.timer) clearInterval(room.timer);
         if (room._trainingTimers) room._trainingTimers.forEach((t) => clearTimeout(t));
         delete rooms[pin];
@@ -794,8 +779,8 @@ export function startRoomGC(): void {
     if (cleaned > 0) {
       log.info({ cleaned, remaining: Object.keys(rooms).length }, 'Room GC: cleaned stale rooms');
     }
-  }, GC_INTERVAL_MS);
-  log.info({ ttlMinutes: ROOM_TTL_MS / 60000, intervalMinutes: GC_INTERVAL_MS / 60000 }, 'Room GC started');
+  }, ROOM_GC.GC_INTERVAL_MS);
+  log.info({ ttlMinutes: ROOM_GC.ROOM_TTL_MS / 60000, intervalMinutes: ROOM_GC.GC_INTERVAL_MS / 60000 }, 'Room GC started');
 }
 
 // ========== PLAYER RECONNECTION ==========

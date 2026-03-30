@@ -1,10 +1,11 @@
 import crypto from 'crypto';
 import { Avatar } from './types';
+import { LIMITS } from './config';
 
 export function generatePin(existingPins: Set<string>): string {
   let pin: string;
   do {
-    pin = String(Math.floor(100000 + Math.random() * 900000));
+    pin = String(Math.floor(LIMITS.PIN_RANGE_MIN + Math.random() * LIMITS.PIN_RANGE_MAX));
   } while (existingPins.has(pin));
   return pin;
 }
@@ -17,7 +18,7 @@ export function generateToken(): string {
   return crypto.randomBytes(16).toString('hex');
 }
 
-export function sanitize(str: string, maxLength = 500): string {
+export function sanitize(str: string, maxLength: number = LIMITS.MAX_SANITIZE_LENGTH): string {
   if (typeof str !== 'string') return '';
   return (
     str
@@ -36,7 +37,7 @@ export function sanitizeUrl(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
   const trimmed = url.trim();
   if (!/^https?:\/\/.+/i.test(trimmed)) return null;
-  return sanitize(trimmed, 2000);
+  return sanitize(trimmed, LIMITS.MAX_URL_LENGTH);
 }
 
 const AVATAR_ICONS = [

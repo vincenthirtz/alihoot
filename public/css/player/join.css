@@ -1,0 +1,74 @@
+/* Join screen */
+#join-screen .card { text-align: center; }
+#join-screen .card .logo { font-size: 2.5rem; }
+#join-screen .btn { width: 100%; margin-top: 10px; }
+
+/* Avatar picker */
+.avatar-picker { margin-bottom: 15px; text-align: center; }
+
+.avatar-picker label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--card-label);
+}
+
+.avatar-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin: 0 auto 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: all 0.2s;
+}
+
+.avatar-emoji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.avatar-pick-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background: var(--qblock-bg);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-pick-btn:hover { border-color: var(--purple); transform: scale(1.1); }
+.avatar-pick-btn.active { border-color: var(--purple); background: rgba(70,23,143,0.2); transform: scale(1.1); }
+
+.avatar-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.avatar-color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.avatar-color-btn:hover { transform: scale(1.2); }
+.avatar-color-btn.active { border-color: white; transform: scale(1.2); box-shadow: 0 0 10px rgba(255,255,255,0.4); }

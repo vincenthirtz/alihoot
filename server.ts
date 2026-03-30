@@ -10,6 +10,7 @@ import * as game from './lib/game';
 import * as db from './lib/db';
 import * as redis from './lib/redis';
 import log from './lib/logger';
+import { RATE_LIMITS, LIMITS, TIMERS, DB } from './lib/config';
 
 const app = express();
 const server = http.createServer(app);
@@ -28,7 +29,7 @@ const corsOptions: cors.CorsOptions = {
 
 const io = new Server(server, {
   cors: corsOptions,
-  maxHttpBufferSize: 1e6, // 1MB max payload
+  maxHttpBufferSize: LIMITS.MAX_HTTP_BUFFER,
 });
 
 // Resolve root directory (works from both src and dist/)
@@ -41,8 +42,8 @@ app.use(cors(corsOptions));
 
 // HTTP rate limiting
 const apiLimiter = createHttpRateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 60, // 60 requests per minute per IP
+  windowMs: RATE_LIMITS.HTTP_WINDOW_MS,
+  max: RATE_LIMITS.HTTP_MAX_REQUESTS,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Trop de requêtes, réessaie dans une minute' },
@@ -50,7 +51,7 @@ const apiLimiter = createHttpRateLimit({
 app.use('/api/', apiLimiter);
 
 // JSON body parser with size limit
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: LIMITS.MAX_JSON_BODY }));
 
 // Serve static files (Vite build output in production, public/ for static assets)
 app.use(express.static(CLIENT_DIR));
@@ -171,7 +172,7 @@ app.get('/api/leaderboard', async (req, res) => {
   const period = (req.query.period as string) || 'all';
   const validPeriods = ['week', 'month', 'all'];
   const safePeriod = validPeriods.includes(period) ? (period as 'week' | 'month' | 'all') : 'all';
-  const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 50, 1), 100);
+  const limit = Math.min(Math.max(parseInt(req.query.limit as string) || DB.DEFAULT_LEADERBOARD_LIMIT, 1), DB.MAX_LEADERBOARD_LIMIT);
   const offset = Math.max(parseInt(req.query.offset as string) || 0, 0);
   const { players, total } = await db.getLeaderboard(safePeriod, limit, offset);
   res.json({ players, total, limit, offset });
@@ -247,10 +248,10 @@ function createRateLimiter(maxPerWindow: number, windowMs: number): RateLimiterF
 }
 
 const rateLimiters: Record<string, RateLimiterFn> = {
-  answer: createRateLimiter(5, 10000),
-  react: createRateLimiter(10, 10000),
-  join: createRateLimiter(5, 30000),
-  default: createRateLimiter(20, 10000),
+  answer: createRateLimiter(RATE_LIMITS.SOCKET_ANSWER.max, RATE_LIMITS.SOCKET_ANSWER.windowMs),
+  react: createRateLimiter(RATE_LIMITS.SOCKET_REACT.max, RATE_LIMITS.SOCKET_REACT.windowMs),
+  join: createRateLimiter(RATE_LIMITS.SOCKET_JOIN.max, RATE_LIMITS.SOCKET_JOIN.windowMs),
+  default: createRateLimiter(RATE_LIMITS.SOCKET_DEFAULT.max, RATE_LIMITS.SOCKET_DEFAULT.windowMs),
 };
 
 function rateLimit(socket: RateLimitedSocket, eventName: string, cb: () => void): void {
@@ -666,7 +667,7 @@ server.listen(PORT, async () => {
           log.warn({ err: e }, 'Keep-alive ping failed');
         }
       },
-      14 * 60 * 1000,
+      TIMERS.KEEP_ALIVE_INTERVAL_MS,
     );
     log.info('Keep-alive enabled (every 14 min)');
   }

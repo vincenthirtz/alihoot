@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client';
 import { AudioSystem } from './audio.js';
 import { startConfetti } from './confetti.js';
+import { TIMING, VIBRATION, PODIUM, ANIMATION, VALIDATION } from './config.js';
 
 const BACKEND_URL = import.meta.env.PROD ? 'https://alihoot.onrender.com' : '';
 const socket = io(BACKEND_URL || undefined);
@@ -122,10 +123,10 @@ const loadingTextEl = document.getElementById('loading-text');
 let _loadingStart = Date.now();
 let _loadingInterval = setInterval(() => {
   const elapsed = Math.floor((Date.now() - _loadingStart) / 1000);
-  if (loadingTextEl && elapsed > 3) {
+  if (loadingTextEl && elapsed > TIMING.LOADING_SLOW_THRESHOLD_S) {
     loadingTextEl.textContent = `Connexion au serveur... (${elapsed}s)`;
   }
-}, 1000);
+}, TIMING.LOADING_CHECK_INTERVAL_MS);
 
 function hideLoadingOverlay() {
   if (loadingOverlay) loadingOverlay.classList.add('hidden');
@@ -363,7 +364,7 @@ socket.on('player:register-error', ({ message }) => {
 joinBtn.addEventListener('click', () => {
   const pin = pinInput.value.trim();
   const nickname = nicknameInput.value.trim();
-  if (!pin || pin.length < 6) {
+  if (!pin || pin.length < VALIDATION.MIN_PIN_LENGTH) {
     joinError.textContent = 'Entre un code PIN a 6 chiffres';
     return;
   }
@@ -486,7 +487,7 @@ socket.on(
 socket.on('player:kicked', () => {
   sessionStorage.removeItem('alihoot-session');
   document.getElementById('kicked-overlay').style.display = 'flex';
-  setTimeout(() => window.location.reload(), 3000);
+  setTimeout(() => window.location.reload(), TIMING.KICKED_RELOAD_DELAY_MS);
 });
 
 // ========== COUNTDOWN ==========
@@ -498,11 +499,11 @@ socket.on('game:starting', ({ countdown }) => {
   let count = countdown;
   numEl.textContent = count;
 
-  vibrate(200);
+  vibrate(VIBRATION.COUNTDOWN_INITIAL);
   const interval = setInterval(() => {
     count--;
     AudioSystem.play('countdown');
-    vibrate(100);
+    vibrate(VIBRATION.COUNTDOWN_TICK);
     if (count <= 0) {
       clearInterval(interval);
       overlay.style.display = 'none';
@@ -726,7 +727,7 @@ function attachAnswerListeners() {
       answered = true;
       const idx = parseInt(btn.dataset.index);
       AudioSystem.play('click');
-      vibrate(30);
+      vibrate(VIBRATION.ANSWER_TAP);
 
       document.querySelectorAll('#answer-grid .answer-btn').forEach((b) => {
         if (b === btn) b.classList.add('selected');
@@ -739,7 +740,7 @@ function attachAnswerListeners() {
         questionIndex: currentQuestionIndex,
         answerIndex: idx,
       });
-      setTimeout(() => showScreen('waiting'), 500);
+      setTimeout(() => showScreen('waiting'), TIMING.ANSWER_TRANSITION_MS);
     });
   });
 }
@@ -775,7 +776,7 @@ document.getElementById('multi-submit').addEventListener('click', () => {
     questionIndex: currentQuestionIndex,
     answerIndex: selectedMulti,
   });
-  setTimeout(() => showScreen('waiting'), 500);
+  setTimeout(() => showScreen('waiting'), TIMING.ANSWER_TRANSITION_MS);
 });
 
 // Freetext submit
@@ -796,7 +797,7 @@ function submitFreetext() {
     questionIndex: currentQuestionIndex,
     answerIndex: val,
   });
-  setTimeout(() => showScreen('waiting'), 500);
+  setTimeout(() => showScreen('waiting'), TIMING.ANSWER_TRANSITION_MS);
 }
 
 // ========== ORDERING (drag & drop) ==========
@@ -938,7 +939,7 @@ document.getElementById('ordering-submit').addEventListener('click', () => {
     el.draggable = false;
     el.style.opacity = '0.7';
   });
-  setTimeout(() => showScreen('waiting'), 500);
+  setTimeout(() => showScreen('waiting'), TIMING.ANSWER_TRANSITION_MS);
 });
 
 // Slider submit
@@ -950,13 +951,13 @@ document.getElementById('slider-submit').addEventListener('click', () => {
   const val = parseFloat(sliderInput.value);
   sliderInput.disabled = true;
   AudioSystem.play('click');
-  vibrate(30);
+  vibrate(VIBRATION.ANSWER_TAP);
   socket.emit('player:answer', {
     pin: currentPin,
     questionIndex: currentQuestionIndex,
     answerIndex: val,
   });
-  setTimeout(() => showScreen('waiting'), 500);
+  setTimeout(() => showScreen('waiting'), TIMING.ANSWER_TRANSITION_MS);
 });
 
 // ========== TIMER ==========
@@ -1097,14 +1098,14 @@ socket.on(
         text.textContent = 'Bonne réponse !';
         text.className = 'result-text result-correct';
         pts.textContent = `+${points} points`;
-        vibrate(100);
+        vibrate(VIBRATION.CORRECT);
       } else {
         icon.textContent = '✗';
         icon.className = 'success-icon result-wrong';
         text.textContent = 'Mauvaise réponse';
         text.className = 'result-text result-wrong';
         pts.textContent = '0 points';
-        vibrate([50, 50, 50]);
+        vibrate(VIBRATION.WRONG);
       }
 
       // Show real-time rank
@@ -1127,7 +1128,7 @@ socket.on(
       }
 
       showScreen('result');
-    }, 1500);
+    }, TIMING.RESULT_REVEAL_MS);
   },
 );
 
@@ -1145,7 +1146,7 @@ function renderPlayerLeaderboard(rankings) {
     .map((r, i) => {
       const isMe = r.nickname === currentNickname;
       const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-      return `<div class="leaderboard-row${isMe ? ' highlight' : ''}" style="animation-delay: ${i * 0.08}s">
+      return `<div class="leaderboard-row${isMe ? ' highlight' : ''}" style="animation-delay: ${i * ANIMATION.LEADERBOARD_ROW_DELAY_S}s">
       <div class="avatar" style="background:${r.avatar?.color || '#666'}">${r.avatar?.icon || '👤'}</div>
       <div class="rank ${rankClass}">${r.rank}</div>
       <div class="name">${r.nickname}${isMe ? ' (toi)' : ''}${r.streak > 1 ? `<span class="streak-badge">🔥${r.streak}</span>` : ''}</div>
@@ -1173,7 +1174,7 @@ socket.on('game:reaction', ({ nickname, emoji }) => {
   el.style.left = Math.random() * 80 + 10 + '%';
   el.style.bottom = '20%';
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 2000);
+  setTimeout(() => el.remove(), TIMING.REACTION_LIFETIME_MS);
 });
 
 // ========== PODIUM / FINAL ==========
@@ -1191,7 +1192,7 @@ function renderPodiumWithSuspense(podium) {
   const revealOrder = [2, 1, 0]; // indices into podium array
   const classes = ['third', 'second', 'first'];
   const medals = ['🥉', '🥈', '🥇'];
-  const delays = [500, 2500, 5000]; // ms before each reveal
+  const delays = PODIUM.DELAYS_MS;
 
   el.innerHTML = '';
 
@@ -1225,10 +1226,10 @@ function renderPodiumWithSuspense(podium) {
 function renderFinalLeaderboard(rankings) {
   const el = document.getElementById('final-leaderboard');
   el.innerHTML = rankings
-    .slice(0, 10)
+    .slice(0, ANIMATION.FINAL_MAX_ROWS)
     .map((r, i) => {
       const isMe = r.nickname === currentNickname;
-      return `<div class="leaderboard-row${isMe ? ' highlight' : ''}" style="animation-delay: ${i * 0.06}s">
+      return `<div class="leaderboard-row${isMe ? ' highlight' : ''}" style="animation-delay: ${i * ANIMATION.FINAL_ROW_DELAY_S}s">
       <div class="avatar" style="background:${r.avatar?.color || '#666'}">${r.avatar?.icon || '👤'}</div>
       <div class="rank">${r.rank}</div>
       <div class="name">${r.nickname}</div>
@@ -1275,7 +1276,7 @@ socket.on('achievement:unlocked', ({ achievements }) => {
     const meta = ACHIEVEMENT_META[id] || { icon: '🏅', label: id };
     const toast = document.createElement('div');
     toast.className = 'achievement-toast';
-    toast.style.animationDelay = `${i * 0.6}s, ${3.6 + i * 0.6}s`;
+    toast.style.animationDelay = `${i * TIMING.ACHIEVEMENT_STAGGER_MS / 1000}s, ${(TIMING.ACHIEVEMENT_BASE_DURATION_MS - TIMING.ACHIEVEMENT_STAGGER_MS * 1.5) / 1000 + i * TIMING.ACHIEVEMENT_STAGGER_MS / 1000}s`;
     toast.innerHTML = `
       <div class="achievement-toast-icon">${meta.icon}</div>
       <div class="achievement-toast-text">
@@ -1283,7 +1284,7 @@ socket.on('achievement:unlocked', ({ achievements }) => {
         <div>${meta.label}</div>
       </div>`;
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), 4500 + i * 600);
+    setTimeout(() => toast.remove(), TIMING.ACHIEVEMENT_BASE_DURATION_MS + i * TIMING.ACHIEVEMENT_STAGGER_MS);
   });
 
   AudioSystem.play('correct');

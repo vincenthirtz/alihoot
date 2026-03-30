@@ -1,3 +1,5 @@
+import { CONFETTI } from './config.js';
+
 export function startConfetti() {
   const canvas = document.getElementById('confetti-canvas');
   if (!canvas) return;
@@ -8,7 +10,7 @@ export function startConfetti() {
   const colors = ['#e21b3c', '#1368ce', '#d89e00', '#26890c', '#ffd700', '#ff6b6b', '#46178f', '#2ecc71'];
   const particles = [];
 
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < CONFETTI.PARTICLE_COUNT; i++) {
     particles.push({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height - canvas.height,
@@ -24,7 +26,7 @@ export function startConfetti() {
   }
 
   let frame = 0;
-  const maxFrames = 300;
+  const maxFrames = CONFETTI.MAX_FRAMES;
 
   function animate() {
     frame++;
@@ -33,11 +35,11 @@ export function startConfetti() {
     particles.forEach((p) => {
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.05;
+      p.vy += CONFETTI.GRAVITY;
       p.rotation += p.rotationSpeed;
 
-      if (frame > maxFrames - 60) {
-        p.opacity = Math.max(0, p.opacity - 0.02);
+      if (frame > maxFrames - CONFETTI.FADE_START_FRAMES_FROM_END) {
+        p.opacity = Math.max(0, p.opacity - CONFETTI.OPACITY_DECREMENT);
       }
 
       ctx.save();

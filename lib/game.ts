@@ -2,6 +2,7 @@ import * as store from './store';
 import { Server } from 'socket.io';
 import { Dashboard, QuestionStats } from './types';
 import log from './logger';
+import { TIMERS } from './config';
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -26,7 +27,7 @@ export function startGame(pin: string, io: Server): boolean {
   room.state = 'question';
   room.gameStartedAt = new Date().toISOString();
   io.to(`room:${pin}`).emit('game:starting', { countdown: 3 });
-  setTimeout(() => broadcastQuestion(pin, io), 3000);
+  setTimeout(() => broadcastQuestion(pin, io), TIMERS.GAME_START_COUNTDOWN_MS);
   return true;
 }
 
@@ -125,7 +126,7 @@ function startTimer(pin: string, io: Server, timeLimit: number): void {
       room.timer = null;
       timeUp(pin, io);
     }
-  }, 1000);
+  }, TIMERS.TICK_INTERVAL_MS);
 }
 
 function timeUp(pin: string, io: Server): void {
@@ -165,7 +166,7 @@ function scheduleTrainingAdvance(pin: string, io: Server): void {
       const r = store.getRoom(pin);
       if (!r || r.state === 'finished') return;
       showLeaderboard(pin, io);
-    }, 2000),
+    }, TIMERS.TRAINING_LEADERBOARD_DELAY_MS),
   );
 
   room._trainingTimers.push(
@@ -173,7 +174,7 @@ function scheduleTrainingAdvance(pin: string, io: Server): void {
       const r = store.getRoom(pin);
       if (!r || r.state === 'finished') return;
       nextQuestion(pin, io);
-    }, 5000),
+    }, TIMERS.TRAINING_NEXT_QUESTION_DELAY_MS),
   );
 }
 
@@ -268,7 +269,7 @@ function endGame(pin: string, io: Server): void {
   // Training mode: auto-cleanup after 60s
   if (room.training) {
     clearTrainingTimers(room);
-    setTimeout(() => store.deleteRoom(pin), 60000);
+    setTimeout(() => store.deleteRoom(pin), TIMERS.TRAINING_CLEANUP_MS);
   }
 }
 

@@ -1,0 +1,10 @@
+@media (max-width: 600px) {
+  .choices-grid { grid-template-columns: 1fr; }
+  .pin-display { font-size: 3rem; letter-spacing: 6px; }
+  #create-screen .card { padding: 20px; }
+  .type-selector { gap: 4px; }
+  .type-btn { font-size: 0.7rem; padding: 5px 10px; }
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .q-header-actions { gap: 2px; }
+  .q-action-btn { padding: 2px 5px; font-size: 0.7rem; }
+}

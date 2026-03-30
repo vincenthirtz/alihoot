@@ -1,3 +1,5 @@
+import { AUDIO } from './config.js';
+
 // Audio system using Web Audio API - generates sounds programmatically
 let ctx = null;
 let enabled = true;
@@ -52,7 +54,7 @@ function startLobbyMusic() {
   if (!musicEnabled) return;
   const c = getCtx();
   lobbyGain = c.createGain();
-  lobbyGain.gain.setValueAtTime(0.08, c.currentTime);
+  lobbyGain.gain.setValueAtTime(AUDIO.LOBBY_GAIN, c.currentTime);
   lobbyGain.connect(c.destination);
 
   const notes = [392, 440, 523, 440, 392, 349, 392, 440, 523, 659, 587, 523, 440, 392, 349, 330];
@@ -73,7 +75,7 @@ function startLobbyMusic() {
   const interval = setInterval(() => {
     if (!lobbyOsc) { clearInterval(interval); return; }
     playNote();
-  }, 400);
+  }, AUDIO.LOBBY_NOTE_INTERVAL_MS);
 
   lobbyOsc._interval = interval;
   playNote();
@@ -100,25 +102,25 @@ function play(name) {
 let tensionOsc = null;
 let tensionGain = null;
 let tensionInterval = null;
-let tensionBpm = 90;
+let tensionBpm = AUDIO.TENSION_BASE_BPM;
 
 function startTensionMusic(duration = 20) {
   if (!musicEnabled) return;
   stopTensionMusic();
   const c = getCtx();
   tensionGain = c.createGain();
-  tensionGain.gain.setValueAtTime(0.06, c.currentTime);
+  tensionGain.gain.setValueAtTime(AUDIO.TENSION_BASE_GAIN, c.currentTime);
   tensionGain.connect(c.destination);
 
   tensionOsc = c.createOscillator();
   tensionOsc.type = 'square';
-  tensionOsc.frequency.setValueAtTime(110, c.currentTime);
+  tensionOsc.frequency.setValueAtTime(AUDIO.TENSION_BASE_FREQ, c.currentTime);
   tensionOsc.connect(tensionGain);
   tensionOsc.start();
 
-  const pattern = [110, 0, 165, 0, 110, 0, 220, 0];
+  const pattern = [AUDIO.TENSION_BASE_FREQ, 0, 165, 0, AUDIO.TENSION_BASE_FREQ, 0, 220, 0];
   let noteIdx = 0;
-  tensionBpm = 90;
+  tensionBpm = AUDIO.TENSION_BASE_BPM;
   const startTime = Date.now();
 
   tensionInterval = setInterval(() => {
@@ -126,9 +128,9 @@ function startTensionMusic(duration = 20) {
     const elapsed = (Date.now() - startTime) / 1000;
     const progress = Math.min(elapsed / duration, 1);
     // Speed up as time runs out
-    tensionBpm = 90 + progress * 90;
+    tensionBpm = AUDIO.TENSION_BASE_BPM + progress * AUDIO.TENSION_MAX_BPM_DELTA;
     // Volume increases too
-    if (tensionGain) tensionGain.gain.setValueAtTime(0.06 + progress * 0.04, c.currentTime);
+    if (tensionGain) tensionGain.gain.setValueAtTime(AUDIO.TENSION_BASE_GAIN + progress * 0.04, c.currentTime);
 
     const freq = pattern[noteIdx % pattern.length];
     if (tensionOsc) {
@@ -143,9 +145,9 @@ function startTensionMusic(duration = 20) {
     if (!tensionOsc) return;
     const elapsed = (Date.now() - startTime) / 1000;
     const progress = Math.min(elapsed / duration, 1);
-    tensionBpm = 90 + progress * 90;
+    tensionBpm = AUDIO.TENSION_BASE_BPM + progress * AUDIO.TENSION_MAX_BPM_DELTA;
     if (tensionGain) {
-      try { tensionGain.gain.setValueAtTime(0.06 + progress * 0.04, c.currentTime); } catch {}
+      try { tensionGain.gain.setValueAtTime(AUDIO.TENSION_BASE_GAIN + progress * 0.04, c.currentTime); } catch {}
     }
     const freq = pattern[noteIdx % pattern.length];
     if (tensionOsc) {
