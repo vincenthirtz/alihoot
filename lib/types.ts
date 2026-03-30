@@ -13,6 +13,7 @@ export interface BaseQuestion {
   image: string | null;
   video: string | null;
   explanation: string | null;
+  explanationImage: string | null;
   choices: string[];
   _shuffleMap?: number[] | null;
   _shuffledCorrectIndex?: number;

@@ -136,11 +136,13 @@ function timeUp(pin: string, io: Server): void {
 
   room.state = 'time-up';
   const explanation = question.explanation || null;
-  io.to(`room:${pin}`).emit('game:time-up', { explanation });
+  const explanationImage = question.explanationImage || null;
+  io.to(`room:${pin}`).emit('game:time-up', { explanation, explanationImage });
   io.to(`room:${pin}`).emit('audio:play', { sound: 'time-up' });
 
   const stats = store.getAnswerStats(pin, room.currentQuestionIndex);
   stats.explanation = explanation;
+  stats.explanationImage = explanationImage;
   io.to(room.adminSocketId).emit('game:answer-stats', stats);
 
   // Training mode: auto-advance

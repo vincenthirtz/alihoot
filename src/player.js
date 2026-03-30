@@ -975,7 +975,7 @@ socket.on('game:answer-count', ({ answered: count, total }) => {
   }
 });
 
-socket.on('game:time-up', ({ explanation }) => {
+socket.on('game:time-up', ({ explanation, explanationImage }) => {
   AudioSystem.stopTensionMusic();
   if (!answered || isSpectator) {
     document.querySelectorAll('#answer-grid .answer-btn').forEach((b) => {
@@ -994,11 +994,8 @@ socket.on('game:time-up', ({ explanation }) => {
     showScreen('waiting');
   }
   // Store explanation for display on result screen
-  if (explanation) {
-    window._currentExplanation = explanation;
-  } else {
-    window._currentExplanation = null;
-  }
+  window._currentExplanation = explanation || null;
+  window._currentExplanationImage = explanationImage || null;
 });
 
 // ========== RESULT ==========
@@ -1117,7 +1114,8 @@ socket.on(
 
       const explanationEl = document.getElementById('result-explanation');
       if (window._currentExplanation) {
-        explanationEl.textContent = '💡 ' + window._currentExplanation;
+        explanationEl.innerHTML = '💡 ' + window._currentExplanation +
+          (window._currentExplanationImage ? `<img class="explanation-image" src="${window._currentExplanationImage}" alt="">` : '');
         explanationEl.style.display = 'block';
       } else {
         explanationEl.style.display = 'none';

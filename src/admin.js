@@ -494,7 +494,10 @@ function addQuestion(prefill = null) {
       <input type="text" class="video-input" placeholder="🎬 URL de la video YouTube (optionnel)" value="${prefill?.video || ''}">
     </div>
     <div class="q-body"></div>
-    <input type="text" class="explanation-input" placeholder="💡 Explication (optionnel, affichée après la réponse)" maxlength="300" value="${prefill?.explanation || ''}">
+    <div class="explanation-group">
+      <input type="text" class="explanation-input" placeholder="💡 Explication (optionnel, affichée après la réponse)" maxlength="300" value="${prefill?.explanation || ''}">
+      <input type="text" class="explanation-image-input" placeholder="🖼️ URL image explication (optionnel)" value="${prefill?.explanationImage || ''}">
+    </div>
     <div class="q-options-row">
       <div class="time-select">
         <label>Temps :</label>
@@ -730,6 +733,7 @@ function getQuestionDataFromBlock(block) {
   const timeLimit = parseInt(block.querySelector('.time-select-input').value);
   const pointsMultiplier = parseInt(block.querySelector('.points-select-input').value) || 1;
   const explanation = block.querySelector('.explanation-input')?.value.trim() || '';
+  const explanationImage = block.querySelector('.explanation-image-input')?.value.trim() || '';
 
   const video = block.querySelector('.video-input')?.value.trim() || '';
   const q = {
@@ -740,6 +744,7 @@ function getQuestionDataFromBlock(block) {
     timeLimit,
     pointsMultiplier,
     explanation: explanation || null,
+    explanationImage: explanationImage || null,
   };
 
   if (type === 'slider') {
@@ -918,7 +923,7 @@ function renderPreview() {
     }
     <div class="question-text" style="font-size:1.2rem;">${q.text || '<em style="opacity:0.5;">Sans titre</em>'}</div>
     ${answersHtml}
-    ${q.explanation ? `<div class="explanation-display">💡 ${q.explanation}</div>` : ''}
+    ${q.explanation ? `<div class="explanation-display">💡 ${q.explanation}${q.explanationImage ? `<img class="explanation-image" src="${q.explanationImage}" alt="">` : ''}</div>` : ''}
   `;
 }
 
@@ -1001,7 +1006,7 @@ function updateLivePreview() {
     }
     <div class="question-text">${q.text || '<em style="opacity:0.5;">Sans titre</em>'}</div>
     ${answersHtml}
-    ${q.explanation ? `<div class="explanation-display">💡 ${q.explanation}</div>` : ''}
+    ${q.explanation ? `<div class="explanation-display">💡 ${q.explanation}${q.explanationImage ? `<img class="explanation-image" src="${q.explanationImage}" alt="">` : ''}</div>` : ''}
   `;
 }
 
@@ -1109,6 +1114,7 @@ document.getElementById('create-quiz-btn').addEventListener('click', async () =>
 
     const video = block.querySelector('.video-input')?.value.trim() || '';
     const explanation = block.querySelector('.explanation-input')?.value.trim() || '';
+    const explanationImage = block.querySelector('.explanation-image-input')?.value.trim() || '';
     const q = {
       text,
       type,
@@ -1117,6 +1123,7 @@ document.getElementById('create-quiz-btn').addEventListener('click', async () =>
       timeLimit,
       pointsMultiplier,
       explanation: explanation || null,
+      explanationImage: explanationImage || null,
     };
 
     if (type === 'slider') {
@@ -1549,7 +1556,8 @@ socket.on('game:answer-stats', (stats) => {
   // Show explanation if present
   const explanationEl = document.getElementById('stats-explanation');
   if (stats.explanation) {
-    explanationEl.textContent = '💡 ' + stats.explanation;
+    explanationEl.innerHTML = '💡 ' + stats.explanation +
+      (stats.explanationImage ? `<img class="explanation-image" src="${stats.explanationImage}" alt="">` : '');
     explanationEl.style.display = 'block';
   } else {
     explanationEl.style.display = 'none';

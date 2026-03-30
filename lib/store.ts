@@ -33,6 +33,7 @@ interface RawQuestionInput {
   image?: string;
   video?: string;
   explanation?: string;
+  explanationImage?: string;
   choices?: string[];
   correctIndex?: number;
   correctIndices?: number[];
@@ -82,6 +83,7 @@ export function createQuiz(
         image: q.image ? sanitizeUrl(q.image) : null,
         video: q.video ? sanitizeUrl(q.video) : null,
         explanation: q.explanation ? sanitize(q.explanation, LIMITS.MAX_EXPLANATION_LENGTH) : null,
+        explanationImage: q.explanationImage ? sanitizeUrl(q.explanationImage) : null,
         choices: [] as string[],
       };
 

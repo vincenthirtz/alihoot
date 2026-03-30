@@ -268,6 +268,28 @@ body.dark .ordering-item .ordering-num {
   border-color: var(--yellow);
 }
 
+.explanation-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.explanation-image-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.85rem;
+  border: 2px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--input-bg);
+  color: var(--input-text);
+  transition: border-color 0.2s;
+}
+
+.explanation-image-input:focus {
+  border-color: var(--yellow);
+}
+
 .image-preview {
   max-width: 200px;
   max-height: 100px;
