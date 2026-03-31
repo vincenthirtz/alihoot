@@ -2,12 +2,13 @@
 // All magic numbers and tunable constants in one place.
 
 export const SCORING = {
-  BASE_POINTS: 1000,
-  MIN_POINTS: 500,
-  STREAK_BONUS_PER_CORRECT: 100,
-  STREAK_BONUS_CAP: 500,
-  ACHIEVEMENT_GOOD_SCORE: 5000,
-  ACHIEVEMENT_EXPERT_SCORE: 10000,
+  /** Points awarded for a correct answer (mcq, true/false, freetext, slider, ordering) */
+  CORRECT_POINTS: 3,
+  /** Points awarded per correct choice in a multi-select question */
+  MULTI_POINTS_PER_CORRECT: 1,
+  /** Achievement thresholds (adjusted for simplified scoring) */
+  ACHIEVEMENT_GOOD_SCORE: 15,
+  ACHIEVEMENT_EXPERT_SCORE: 30,
 } as const;
 
 export const TIMERS = {
@@ -42,8 +43,6 @@ export const LIMITS = {
   MIN_TIMELIMIT: 5,
   MAX_TIMELIMIT: 120,
   DEFAULT_TIMELIMIT: 20,
-  MIN_POINTS_MULTIPLIER: 1,
-  MAX_POINTS_MULTIPLIER: 3,
   MAX_UNIT_LENGTH: 20,
   MAX_SANITIZE_LENGTH: 500,
   MAX_URL_LENGTH: 2000,

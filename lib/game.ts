@@ -92,7 +92,6 @@ function broadcastQuestion(pin: string, io: Server): void {
     type: question.type,
     image: question.image || null,
     video: question.video || null,
-    pointsMultiplier: question.pointsMultiplier || 1,
     orderingItems: orderingItems ? orderingItems.map((o) => o.item) : null,
     orderingMap: orderingItems ? orderingItems.map((o) => o.originalIndex) : null,
     slider: sliderData,

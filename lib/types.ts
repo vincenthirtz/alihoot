@@ -9,7 +9,6 @@ export interface BaseQuestion {
   text: string;
   type: QuestionType;
   timeLimit: number;
-  pointsMultiplier: number;
   image: string | null;
   video: string | null;
   explanation: string | null;

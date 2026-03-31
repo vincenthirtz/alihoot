@@ -18,7 +18,6 @@ interface RawQuestionInput {
   text: string;
   type?: string;
   timeLimit?: number;
-  pointsMultiplier?: number;
   image?: string;
   video?: string;
   explanation?: string;
@@ -68,7 +67,6 @@ export function createQuiz(
         text: sanitize(q.text, LIMITS.MAX_QUESTION_TEXT_LENGTH),
         type: safeType as Question['type'],
         timeLimit: Math.min(Math.max(Number(q.timeLimit) || LIMITS.DEFAULT_TIMELIMIT, LIMITS.MIN_TIMELIMIT), LIMITS.MAX_TIMELIMIT),
-        pointsMultiplier: Math.min(Math.max(Number(q.pointsMultiplier) || LIMITS.MIN_POINTS_MULTIPLIER, LIMITS.MIN_POINTS_MULTIPLIER), LIMITS.MAX_POINTS_MULTIPLIER),
         image: q.image ? sanitizeUrl(q.image) : null,
         video: q.video ? sanitizeUrl(q.video) : null,
         explanation: q.explanation ? sanitize(q.explanation, LIMITS.MAX_EXPLANATION_LENGTH) : null,
@@ -450,16 +448,25 @@ export function recordAnswer(
     correct = mappedAnswer === question.correctIndex;
   }
 
-  const multiplier = question.pointsMultiplier || 1;
   let points = 0;
-  if (correct) {
-    points = Math.round(SCORING.BASE_POINTS * (1 - responseTime / timeLimit / 2));
-    points = Math.max(points, SCORING.MIN_POINTS);
-    player.streak++;
-    if (player.streak > 1) {
-      points += Math.min(player.streak * SCORING.STREAK_BONUS_PER_CORRECT, SCORING.STREAK_BONUS_CAP);
+  if (question.type === 'multi') {
+    // 1 point per correctly selected/deselected choice
+    const playerChoices = new Set((mappedAnswer as number[]) || []);
+    const correctChoices = new Set(question.correctIndices || []);
+    const totalChoices = question.choices?.length || correctChoices.size;
+    for (let i = 0; i < totalChoices; i++) {
+      if (playerChoices.has(i) === correctChoices.has(i)) {
+        points += SCORING.MULTI_POINTS_PER_CORRECT;
+      }
     }
-    points = Math.round(points * multiplier);
+    if (correct) {
+      player.streak++;
+    } else {
+      player.streak = 0;
+    }
+  } else if (correct) {
+    points = SCORING.CORRECT_POINTS;
+    player.streak++;
   } else {
     player.streak = 0;
   }

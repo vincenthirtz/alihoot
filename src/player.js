@@ -572,7 +572,6 @@ socket.on(
     type,
     image,
     video,
-    pointsMultiplier,
     orderingItems,
     orderingMap,
     slider,
@@ -584,12 +583,8 @@ socket.on(
     selectedMulti = [];
     currentOrderingMap = orderingMap || null;
 
-    const multiplierBadge =
-      pointsMultiplier && pointsMultiplier > 1
-        ? ` <span class="multiplier-badge">x${pointsMultiplier}</span>`
-        : '';
-    document.getElementById('q-counter').innerHTML =
-      `Question ${questionIndex + 1} / ${total}${multiplierBadge}`;
+    document.getElementById('q-counter').textContent =
+      `Question ${questionIndex + 1} / ${total}`;
     document.getElementById('q-text').textContent = decodeHTML(text);
     document.getElementById('timer-display').textContent = timeLimit;
 

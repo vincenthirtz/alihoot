@@ -517,14 +517,6 @@ function addQuestion(prefill = null) {
             .join('\n          ')}
         </select>
       </div>
-      <div class="points-select">
-        <label>Points :</label>
-        <select class="points-select-input">
-          <option value="1"${(prefill?.pointsMultiplier || 1) == 1 ? ' selected' : ''}>x1</option>
-          <option value="2"${(prefill?.pointsMultiplier || 1) == 2 ? ' selected' : ''}>x2 (bonus)</option>
-          <option value="3"${(prefill?.pointsMultiplier || 1) == 3 ? ' selected' : ''}>x3 (super bonus)</option>
-        </select>
-      </div>
     </div>
   `;
 
@@ -738,7 +730,6 @@ function getQuestionDataFromBlock(block) {
   const type = block.dataset.type || 'mcq';
   const image = block.querySelector('.image-input')?.value.trim() || '';
   const timeLimit = parseInt(block.querySelector('.time-select-input').value);
-  const pointsMultiplier = parseInt(block.querySelector('.points-select-input').value) || 1;
   const explanation = block.querySelector('.explanation-input')?.value.trim() || '';
   const explanationImage = block.querySelector('.explanation-image-input')?.value.trim() || '';
 
@@ -749,7 +740,6 @@ function getQuestionDataFromBlock(block) {
     image: image || null,
     video: video || null,
     timeLimit,
-    pointsMultiplier,
     explanation: explanation || null,
     explanationImage: explanationImage || null,
   };
@@ -871,11 +861,6 @@ function renderPreview() {
   document.getElementById('preview-counter').textContent =
     `${previewIndex + 1}/${previewQuestions.length}`;
 
-  const multiplierBadge =
-    q.pointsMultiplier && q.pointsMultiplier > 1
-      ? `<span class="multiplier-badge">x${q.pointsMultiplier}</span>`
-      : '';
-
   let answersHtml = '';
   if (q.type === 'slider') {
     const unit = q.unit || '';
@@ -914,7 +899,7 @@ function renderPreview() {
   }
 
   body.innerHTML = `
-    <div class="question-counter">Question ${previewIndex + 1} / ${previewQuestions.length} ${multiplierBadge}</div>
+    <div class="question-counter">Question ${previewIndex + 1} / ${previewQuestions.length}</div>
     <div class="timer-text" style="font-size:2rem;">${q.timeLimit}s</div>
     <div class="timer-bar-container"><div class="timer-bar" style="width:100%;"></div></div>
     ${q.image ? `<img class="question-image" src="${q.image}" style="display:block;" alt="">` : ''}
@@ -952,11 +937,6 @@ function updateLivePreview() {
   const blocks = document.querySelectorAll('.question-block');
   const qIndex = Array.from(blocks).indexOf(livePreviewBlock);
   const total = blocks.length;
-
-  const multiplierBadge =
-    q.pointsMultiplier && q.pointsMultiplier > 1
-      ? `<span class="multiplier-badge">x${q.pointsMultiplier}</span>`
-      : '';
 
   let answersHtml = '';
   if (q.type === 'slider') {
@@ -997,7 +977,7 @@ function updateLivePreview() {
   }
 
   body.innerHTML = `
-    <div class="question-counter">Question ${qIndex + 1} / ${total} ${multiplierBadge}</div>
+    <div class="question-counter">Question ${qIndex + 1} / ${total}</div>
     <div class="timer-text">${q.timeLimit}s</div>
     <div class="timer-bar-container"><div class="timer-bar" style="width:100%;"></div></div>
     ${q.image ? `<img class="question-image" src="${q.image}" style="display:block;" alt="">` : ''}
@@ -1111,7 +1091,6 @@ document.getElementById('create-quiz-btn').addEventListener('click', async () =>
     const type = block.dataset.type || 'mcq';
     const image = block.querySelector('.image-input')?.value.trim() || '';
     const timeLimit = parseInt(block.querySelector('.time-select-input').value);
-    const pointsMultiplier = parseInt(block.querySelector('.points-select-input').value) || 1;
 
     if (!text) {
       errorEl.textContent = `Question ${i + 1} : intitulé manquant`;
@@ -1128,7 +1107,6 @@ document.getElementById('create-quiz-btn').addEventListener('click', async () =>
       image: image || null,
       video: video || null,
       timeLimit,
-      pointsMultiplier,
       explanation: explanation || null,
       explanationImage: explanationImage || null,
     };
@@ -1366,7 +1344,6 @@ socket.on(
     type,
     image,
     video,
-    pointsMultiplier,
     orderingItems,
     orderingMap,
   }) => {
@@ -1379,18 +1356,13 @@ socket.on(
       type,
       image,
       video,
-      pointsMultiplier,
       orderingItems,
       orderingMap,
     };
     totalQuestions = total;
 
-    const multiplierBadge =
-      pointsMultiplier && pointsMultiplier > 1
-        ? ` <span class="multiplier-badge">x${pointsMultiplier}</span>`
-        : '';
-    document.getElementById('admin-q-counter').innerHTML =
-      `Question ${questionIndex + 1} / ${total}${multiplierBadge}`;
+    document.getElementById('admin-q-counter').textContent =
+      `Question ${questionIndex + 1} / ${total}`;
     document.getElementById('admin-q-text').textContent = decodeHTML(text);
     document.getElementById('admin-timer').textContent = timeLimit;
     document.getElementById('admin-answer-count').textContent = '0 réponses';
