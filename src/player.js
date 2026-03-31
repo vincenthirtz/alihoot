@@ -12,6 +12,7 @@ let currentNickname = null;
 let currentAvatar = null;
 let currentQuestionIndex = -1;
 let currentQuestionType = 'mcq';
+let currentQuestionChoices = [];
 let answered = false;
 let timerDuration = 20;
 let selectedMulti = [];
@@ -578,6 +579,7 @@ socket.on(
   }) => {
     currentQuestionIndex = questionIndex;
     currentQuestionType = type || 'mcq';
+    currentQuestionChoices = choices || [];
     answered = false;
     timerDuration = timeLimit;
     selectedMulti = [];
@@ -652,6 +654,11 @@ socket.on(
     // Reset answer counter
     const answerCountEl = document.getElementById('player-answer-count');
     if (answerCountEl) answerCountEl.style.display = 'none';
+
+    // Reset stats from previous question
+    document.getElementById('result-stats-bars').style.display = 'none';
+    document.getElementById('result-stats-detail').style.display = 'none';
+    document.getElementById('result-stats-total').style.display = 'none';
 
     freetextInput.style.display = 'none';
     freetextSubmit.style.display = 'none';
@@ -1298,6 +1305,92 @@ socket.on(
     }, TIMING.RESULT_REVEAL_MS);
   },
 );
+
+// ========== ANSWER STATS (graphs) ==========
+
+const statBarColors = ['bar-red', 'bar-blue', 'bar-yellow', 'bar-green', 'bar-orange', 'bar-teal', 'bar-pink', 'bar-indigo'];
+
+socket.on('game:answer-stats', (stats) => {
+  const barsEl = document.getElementById('result-stats-bars');
+  const detailEl = document.getElementById('result-stats-detail');
+  const totalEl = document.getElementById('result-stats-total');
+
+  if (stats.type === 'slider') {
+    barsEl.style.display = 'none';
+    detailEl.style.display = 'flex';
+    const unit = stats.unit || '';
+    const tolMin = stats.correctValue - stats.tolerance;
+    const tolMax = stats.correctValue + stats.tolerance;
+    detailEl.innerHTML = `
+      <div style="text-align:center; width:100%;">
+        <div style="font-size:1.1rem; font-weight:800; margin-bottom:8px;">🎚️ Bonne réponse : ${stats.correctValue}${unit}${stats.tolerance > 0 ? ` (± ${stats.tolerance})` : ''}</div>
+        <div class="slider-stats-bar">
+          <div class="slider-stats-track">
+            <div class="slider-stats-zone" style="left:${((tolMin - stats.sliderMin) / (stats.sliderMax - stats.sliderMin)) * 100}%;width:${((tolMax - tolMin) / (stats.sliderMax - stats.sliderMin)) * 100}%"></div>
+            ${stats.answers
+              .map((v) => {
+                const pct = ((v - stats.sliderMin) / (stats.sliderMax - stats.sliderMin)) * 100;
+                const isOk = Math.abs(v - stats.correctValue) <= stats.tolerance;
+                return `<div class="slider-stats-dot ${isOk ? 'ok' : 'ko'}" style="left:${pct}%"></div>`;
+              })
+              .join('')}
+          </div>
+          <div class="slider-stats-labels"><span>${stats.sliderMin}${unit}</span><span>${stats.sliderMax}${unit}</span></div>
+        </div>
+        <div style="margin-top:10px; font-weight:700; font-size:0.9rem;">${stats.correctCount} / ${stats.totalAnswered} dans la zone</div>
+      </div>`;
+    totalEl.textContent = `${stats.totalAnswered} / ${stats.total} réponses`;
+    totalEl.style.display = 'block';
+  } else if (stats.type === 'ordering') {
+    barsEl.style.display = 'none';
+    detailEl.style.display = 'flex';
+    detailEl.innerHTML = `
+      <div style="text-align:center; width:100%;">
+        <div style="font-size:1.1rem; font-weight:800; margin-bottom:8px;">📊 Bon ordre :</div>
+        ${stats.items.map((item, i) => `<div style="padding:4px 0; font-weight:600;">${i + 1}. ${item}</div>`).join('')}
+        <div style="margin-top:10px; font-weight:700; font-size:0.9rem;">${stats.correctCount} / ${stats.totalAnswered} ont trouvé</div>
+      </div>`;
+    totalEl.textContent = `${stats.totalAnswered} / ${stats.total} réponses`;
+    totalEl.style.display = 'block';
+  } else if (stats.type === 'freetext') {
+    barsEl.style.display = 'none';
+    detailEl.style.display = 'flex';
+    detailEl.innerHTML = Object.entries(stats.answers)
+      .sort((a, b) => b[1] - a[1])
+      .map(([text, count]) => {
+        const isCorrect = stats.acceptedAnswers.includes(text.toLowerCase());
+        return `<div class="freetext-answer-chip ${isCorrect ? 'correct' : 'wrong'}">${text} (${count})</div>`;
+      })
+      .join('');
+    totalEl.style.display = 'none';
+  } else {
+    // MCQ, truefalse, multi — bar chart
+    detailEl.style.display = 'none';
+    barsEl.style.display = 'flex';
+    const maxCount = Math.max(...stats.counts, 1);
+    const choices = currentQuestionChoices || [];
+
+    barsEl.innerHTML = stats.counts
+      .map((count, i) => {
+        const heightPct = (count / maxCount) * 100;
+        const isCorrect =
+          stats.type === 'multi'
+            ? (stats.correctIndices || []).includes(i)
+            : i === stats.correctIndex;
+        return `<div class="stat-bar-wrapper">
+          <div class="stat-bar ${statBarColors[i] || 'bar-red'}${isCorrect ? ' correct-bar' : ''}" style="height: ${Math.max(heightPct, 8)}%">
+            ${count}
+          </div>
+          <div class="stat-label">${shapeIcons[i] || ''} ${decodeHTML(choices[i] || '')}</div>
+        </div>`;
+      })
+      .join('');
+
+    const answered = stats.counts.reduce((a, b) => a + b, 0);
+    totalEl.textContent = `${answered} / ${stats.total} réponses`;
+    totalEl.style.display = 'block';
+  }
+});
 
 // ========== LEADERBOARD ==========
 

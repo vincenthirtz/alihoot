@@ -144,7 +144,7 @@ function timeUp(pin: string, io: Server): void {
   const stats = store.getAnswerStats(pin, room.currentQuestionIndex);
   stats.explanation = explanation;
   stats.explanationImage = explanationImage;
-  io.to(room.adminSocketId).emit('game:answer-stats', stats);
+  io.to(`room:${pin}`).emit('game:answer-stats', stats);
 
   // Training mode: auto-advance
   if (room.training) {
