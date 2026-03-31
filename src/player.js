@@ -857,6 +857,7 @@ function renderOrderingItems(items) {
 
   let draggedEl = null;
 
+  // --- Desktop drag & drop ---
   container.querySelectorAll('.ordering-drag-item').forEach((el) => {
     el.addEventListener('dragstart', (e) => {
       draggedEl = el;
@@ -899,63 +900,193 @@ function renderOrderingItems(items) {
         AudioSystem.play('click');
       }
     });
+  });
 
-    // Touch support
-    let touchStartY = 0;
-    let touchClone = null;
+  // --- Mobile touch drag & drop ---
+  let touchClone = null;
+  let touchOffsetY = 0;
+  let touchOffsetX = 0;
+  let placeholder = null;
+  let autoScrollRAF = null;
+  let lastDropTarget = null;
+  const LONG_PRESS_MS = 150;
+  const AUTO_SCROLL_ZONE = 60;
+  const AUTO_SCROLL_SPEED = 6;
 
-    el.addEventListener(
-      'touchstart',
-      (e) => {
-        draggedEl = el;
-        touchStartY = e.touches[0].clientY;
-        el.classList.add('dragging');
-      },
-      { passive: true },
-    );
+  function getOrderingItems() {
+    return [...container.querySelectorAll('.ordering-drag-item:not(.ordering-placeholder)')];
+  }
 
-    el.addEventListener(
-      'touchmove',
-      (e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        const target = document.elementFromPoint(touch.clientX, touch.clientY);
-        container
-          .querySelectorAll('.ordering-drag-item')
-          .forEach((item) => item.classList.remove('drag-over'));
-        if (
-          target &&
-          target.closest('.ordering-drag-item') &&
-          target.closest('.ordering-drag-item') !== draggedEl
-        ) {
-          target.closest('.ordering-drag-item').classList.add('drag-over');
-        }
-      },
-      { passive: false },
-    );
+  function createPlaceholder() {
+    placeholder = document.createElement('div');
+    placeholder.className = 'ordering-placeholder';
+    placeholder.style.height = draggedEl.offsetHeight + 'px';
+  }
 
-    el.addEventListener('touchend', (e) => {
-      el.classList.remove('dragging');
-      const touch = e.changedTouches[0];
-      const target = document.elementFromPoint(touch.clientX, touch.clientY);
-      if (target) {
-        const dropTarget = target.closest('.ordering-drag-item');
-        if (dropTarget && dropTarget !== draggedEl) {
-          const allItems = [...container.querySelectorAll('.ordering-drag-item')];
-          const fromIdx = allItems.indexOf(draggedEl);
-          const toIdx = allItems.indexOf(dropTarget);
-          if (fromIdx < toIdx) {
-            dropTarget.after(draggedEl);
-          } else {
-            dropTarget.before(draggedEl);
-          }
-          AudioSystem.play('click');
-        }
+  function removePlaceholder() {
+    if (placeholder && placeholder.parentNode) {
+      placeholder.parentNode.removeChild(placeholder);
+    }
+    placeholder = null;
+  }
+
+  function createTouchClone(el, touch) {
+    const rect = el.getBoundingClientRect();
+    touchOffsetX = touch.clientX - rect.left;
+    touchOffsetY = touch.clientY - rect.top;
+
+    touchClone = el.cloneNode(true);
+    touchClone.className = 'ordering-drag-item ordering-touch-clone';
+    touchClone.style.width = rect.width + 'px';
+    touchClone.style.left = (touch.clientX - touchOffsetX) + 'px';
+    touchClone.style.top = (touch.clientY - touchOffsetY) + 'px';
+    document.body.appendChild(touchClone);
+  }
+
+  function moveTouchClone(touch) {
+    if (!touchClone) return;
+    touchClone.style.left = (touch.clientX - touchOffsetX) + 'px';
+    touchClone.style.top = (touch.clientY - touchOffsetY) + 'px';
+  }
+
+  function removeTouchClone() {
+    if (touchClone && touchClone.parentNode) {
+      touchClone.parentNode.removeChild(touchClone);
+    }
+    touchClone = null;
+  }
+
+  function autoScroll(touchY) {
+    cancelAnimationFrame(autoScrollRAF);
+    const scrollParent = container.closest('.screen') || document.documentElement;
+    const vpTop = 0;
+    const vpBottom = window.innerHeight;
+
+    function step() {
+      if (!draggedEl) return;
+      if (touchY < vpTop + AUTO_SCROLL_ZONE) {
+        scrollParent.scrollTop -= AUTO_SCROLL_SPEED;
+        autoScrollRAF = requestAnimationFrame(step);
+      } else if (touchY > vpBottom - AUTO_SCROLL_ZONE) {
+        scrollParent.scrollTop += AUTO_SCROLL_SPEED;
+        autoScrollRAF = requestAnimationFrame(step);
       }
-      container
-        .querySelectorAll('.ordering-drag-item')
-        .forEach((item) => item.classList.remove('drag-over'));
+    }
+    step();
+  }
+
+  function findDropTarget(touchX, touchY) {
+    // Temporarily hide the clone so elementFromPoint finds the real items
+    if (touchClone) touchClone.style.display = 'none';
+    const el = document.elementFromPoint(touchX, touchY);
+    if (touchClone) touchClone.style.display = '';
+    if (!el) return null;
+    const item = el.closest('.ordering-drag-item');
+    if (item && item !== draggedEl && item !== touchClone && !item.classList.contains('ordering-placeholder')) {
+      return item;
+    }
+    return null;
+  }
+
+  function updatePlaceholderPosition(dropTarget, touchY) {
+    if (!dropTarget || !placeholder) return;
+    const rect = dropTarget.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+    if (touchY < midY) {
+      dropTarget.before(placeholder);
+    } else {
+      dropTarget.after(placeholder);
+    }
+  }
+
+  container.querySelectorAll('.ordering-drag-item').forEach((el) => {
+    let longPressTimer = null;
+    let isDragging = false;
+
+    el.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      // Start a long-press timer for drag activation
+      longPressTimer = setTimeout(() => {
+        isDragging = true;
+        draggedEl = el;
+        el.classList.add('dragging');
+
+        createPlaceholder();
+        el.before(placeholder);
+        createTouchClone(el, touch);
+
+        // Haptic feedback
+        if (navigator.vibrate) navigator.vibrate(20);
+      }, LONG_PRESS_MS);
+    }, { passive: true });
+
+    el.addEventListener('touchmove', (e) => {
+      if (!isDragging) {
+        // If finger moves before long press, cancel drag initiation
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+        return;
+      }
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      moveTouchClone(touch);
+      autoScroll(touch.clientY);
+
+      const dropTarget = findDropTarget(touch.clientX, touch.clientY);
+      if (dropTarget !== lastDropTarget) {
+        // Clear previous highlight
+        container.querySelectorAll('.ordering-drag-item').forEach((item) => item.classList.remove('drag-over'));
+        if (dropTarget) {
+          dropTarget.classList.add('drag-over');
+          updatePlaceholderPosition(dropTarget, touch.clientY);
+        }
+        lastDropTarget = dropTarget;
+      } else if (dropTarget) {
+        // Update placeholder even if same target (finger might cross midpoint)
+        updatePlaceholderPosition(dropTarget, touch.clientY);
+      }
+    }, { passive: false });
+
+    el.addEventListener('touchend', () => {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+      cancelAnimationFrame(autoScrollRAF);
+
+      if (!isDragging) return;
+
+      // Insert the dragged element at the placeholder position
+      if (placeholder && placeholder.parentNode) {
+        placeholder.before(draggedEl);
+        AudioSystem.play('click');
+        if (navigator.vibrate) navigator.vibrate(10);
+      }
+
+      el.classList.remove('dragging');
+      container.querySelectorAll('.ordering-drag-item').forEach((item) => item.classList.remove('drag-over'));
+      removePlaceholder();
+      removeTouchClone();
       draggedEl = null;
+      lastDropTarget = null;
+      isDragging = false;
+    });
+
+    el.addEventListener('touchcancel', () => {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+      cancelAnimationFrame(autoScrollRAF);
+
+      if (isDragging) {
+        el.classList.remove('dragging');
+        container.querySelectorAll('.ordering-drag-item').forEach((item) => item.classList.remove('drag-over'));
+        removePlaceholder();
+        removeTouchClone();
+        draggedEl = null;
+        lastDropTarget = null;
+        isDragging = false;
+      }
     });
   });
 }

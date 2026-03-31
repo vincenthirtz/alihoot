@@ -305,7 +305,13 @@
 }
 
 .ordering-drag-item:active { cursor: grabbing; }
-.ordering-drag-item.dragging { opacity: 0.5; transform: scale(0.95); }
+.ordering-drag-item.dragging {
+  opacity: 0.3;
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.08);
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.3);
+}
 .ordering-drag-item.drag-over {
   border-color: var(--yellow);
   background: rgba(255, 255, 255, 0.25);
@@ -314,6 +320,29 @@
 .ordering-drag-item .drag-handle { font-size: 1.3rem; opacity: 0.5; flex-shrink: 0; }
 .ordering-drag-item .drag-text { flex: 1; }
 .ordering-submit-btn { margin-top: 15px; max-width: 500px; }
+
+/* Touch drag clone (floating element that follows the finger) */
+.ordering-touch-clone {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  transform: scale(1.04);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 0 0 2px var(--yellow);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  opacity: 0.95;
+  transition: transform 0.1s ease;
+}
+
+/* Placeholder gap showing where the item will land */
+.ordering-placeholder {
+  border: 2px dashed var(--yellow);
+  border-radius: var(--radius);
+  background: rgba(216, 158, 0, 0.1);
+  transition: height 0.15s ease;
+  min-height: 20px;
+}
 
 /* Slider question */
 .slider-container {
