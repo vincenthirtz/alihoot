@@ -133,11 +133,13 @@
 
 .stat-bar-wrapper {
   flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   height: 100%;
   justify-content: flex-end;
+  overflow: hidden;
 }
 
 .stat-bar {
@@ -173,8 +175,22 @@
   font-size: 0.9rem;
   opacity: 0.8;
   text-align: center;
-  max-width: 100%;
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .stat-label {
+    font-size: 0.7rem;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .stat-bar { font-size: 1rem; padding-top: 5px; }
 }

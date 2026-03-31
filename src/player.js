@@ -1285,9 +1285,10 @@ socket.on(
       }
 
       const explanationEl = document.getElementById('result-explanation');
-      if (window._currentExplanation) {
-        explanationEl.innerHTML = '💡 ' + window._currentExplanation +
-          (window._currentExplanationImage ? `<img class="explanation-image" src="${window._currentExplanationImage}" alt="">` : '');
+      if (window._currentExplanation || window._currentExplanationImage) {
+        explanationEl.innerHTML =
+          (window._currentExplanation ? '💡 ' + window._currentExplanation : '') +
+          (window._currentExplanationImage ? `<img class="explanation-image" src="${decodeHTML(window._currentExplanationImage)}" alt="">` : '');
         explanationEl.style.display = 'block';
       } else {
         explanationEl.style.display = 'none';

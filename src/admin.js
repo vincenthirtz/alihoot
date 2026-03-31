@@ -1544,9 +1544,10 @@ socket.on('game:answer-stats', (stats) => {
 
   // Show explanation if present
   const explanationEl = document.getElementById('stats-explanation');
-  if (stats.explanation) {
-    explanationEl.innerHTML = '💡 ' + stats.explanation +
-      (stats.explanationImage ? `<img class="explanation-image" src="${stats.explanationImage}" alt="">` : '');
+  if (stats.explanation || stats.explanationImage) {
+    explanationEl.innerHTML =
+      (stats.explanation ? '💡 ' + stats.explanation : '') +
+      (stats.explanationImage ? `<img class="explanation-image" src="${decodeHTML(stats.explanationImage)}" alt="">` : '');
     explanationEl.style.display = 'block';
   } else {
     explanationEl.style.display = 'none';
