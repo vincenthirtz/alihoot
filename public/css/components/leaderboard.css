@@ -54,9 +54,13 @@
 
 .leaderboard-row .name {
   flex: 1;
+  min-width: 0;
   font-weight: 700;
   font-size: 1.1rem;
   margin-left: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .leaderboard-row .score {
