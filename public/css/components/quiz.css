@@ -66,16 +66,20 @@
   border-radius: 8px;
   margin: 15px auto;
   max-width: 600px;
+  width: 100%;
+  box-sizing: border-box;
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.4;
   text-align: left;
+  word-break: break-word;
+  overflow: hidden;
 }
 
 .explanation-image {
   display: block;
-  max-width: 100%;
-  max-height: 200px;
+  width: 100%;
+  max-height: 300px;
   border-radius: 8px;
   margin-top: 10px;
   object-fit: contain;

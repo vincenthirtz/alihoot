@@ -63,13 +63,14 @@ async function playQuestion(
   p1: { correct: boolean; points: number };
   p2: { correct: boolean; points: number };
   timeUp: { explanation: string | null; explanationImage: string | null };
+  /** time-up as received by player1 (same data, confirms players get it too) */
+  playerTimeUp: { explanation: string | null; explanationImage: string | null };
 }> {
-  // Listen for time-up before answering (in case all-answered triggers it instantly)
-  const timeUpPromise = waitFor<{ explanation: string | null; explanationImage: string | null }>(
-    admin,
-    'game:time-up',
-    15000,
-  );
+  type TimeUpPayload = { explanation: string | null; explanationImage: string | null };
+
+  // Listen for time-up on admin AND player1 before answering
+  const timeUpPromise = waitFor<TimeUpPayload>(admin, 'game:time-up', 15000);
+  const playerTimeUpPromise = waitFor<TimeUpPayload>(player1, 'game:time-up', 15000);
 
   const p1Result = await emitAndWait<{ correct: boolean; points: number }>(
     player1,
@@ -86,14 +87,14 @@ async function playQuestion(
   );
 
   // Wait for time-up (triggered by all-answered)
-  const timeUp = await timeUpPromise;
+  const [timeUp, playerTimeUp] = await Promise.all([timeUpPromise, playerTimeUpPromise]);
 
   // Show leaderboard
   const lbPromise = waitFor(admin, 'game:leaderboard');
   admin.emit('admin:show-leaderboard', { pin });
   await lbPromise;
 
-  return { p1: p1Result, p2: p2Result, timeUp };
+  return { p1: p1Result, p2: p2Result, timeUp, playerTimeUp };
 }
 
 // ─── Test quiz with all 6 question types ─────────────────────────────
@@ -239,9 +240,12 @@ describe('Quiz E2E – full game flow', { timeout: 120_000 }, () => {
     expect(q1.p1.points).toBe(3);
     expect(q1.p2.correct).toBe(false);
     expect(q1.p2.points).toBe(0);
-    // Explanation text + image should be present
+    // Explanation text + image sent to admin
     expect(q1.timeUp.explanation).toBe('Paris est la capitale depuis 508.');
     expect(q1.timeUp.explanationImage).toBe('https://example.com/paris.jpg');
+    // Same data received by player (mobile/tablet/desktop)
+    expect(q1.playerTimeUp.explanation).toBe(q1.timeUp.explanation);
+    expect(q1.playerTimeUp.explanationImage).toBe(q1.timeUp.explanationImage);
     p1Total += q1.p1.points;
     p2Total += q1.p2.points;
 
@@ -264,6 +268,9 @@ describe('Quiz E2E – full game flow', { timeout: 120_000 }, () => {
     // Image only (no explanation text) should still be sent
     expect(q2.timeUp.explanation).toBeNull();
     expect(q2.timeUp.explanationImage).toBe('https://example.com/earth.png');
+    // Player receives the same
+    expect(q2.playerTimeUp.explanation).toBeNull();
+    expect(q2.playerTimeUp.explanationImage).toBe('https://example.com/earth.png');
     p1Total += q2.p1.points;
     p2Total += q2.p2.points;
 
