@@ -62,9 +62,14 @@ async function playQuestion(
 ): Promise<{
   p1: { correct: boolean; points: number };
   p2: { correct: boolean; points: number };
+  timeUp: { explanation: string | null; explanationImage: string | null };
 }> {
   // Listen for time-up before answering (in case all-answered triggers it instantly)
-  const timeUpPromise = waitFor(admin, 'game:time-up', 15000);
+  const timeUpPromise = waitFor<{ explanation: string | null; explanationImage: string | null }>(
+    admin,
+    'game:time-up',
+    15000,
+  );
 
   const p1Result = await emitAndWait<{ correct: boolean; points: number }>(
     player1,
@@ -81,14 +86,14 @@ async function playQuestion(
   );
 
   // Wait for time-up (triggered by all-answered)
-  await timeUpPromise;
+  const timeUp = await timeUpPromise;
 
   // Show leaderboard
   const lbPromise = waitFor(admin, 'game:leaderboard');
   admin.emit('admin:show-leaderboard', { pin });
   await lbPromise;
 
-  return { p1: p1Result, p2: p2Result };
+  return { p1: p1Result, p2: p2Result, timeUp };
 }
 
 // ─── Test quiz with all 6 question types ─────────────────────────────
@@ -102,12 +107,16 @@ const TEST_QUIZ = {
       choices: ['Lyon', 'Paris', 'Marseille', 'Toulouse'],
       correctIndex: 1,
       timeLimit: 10,
+      explanation: 'Paris est la capitale depuis 508.',
+      explanationImage: 'https://example.com/paris.jpg',
     },
     {
       text: 'La terre est ronde.',
       type: 'truefalse',
       correctIndex: 0,
       timeLimit: 10,
+      explanation: null,
+      explanationImage: 'https://example.com/earth.png',
     },
     {
       text: 'Quels sont des langages de programmation ?',
@@ -230,6 +239,9 @@ describe('Quiz E2E – full game flow', { timeout: 120_000 }, () => {
     expect(q1.p1.points).toBe(3);
     expect(q1.p2.correct).toBe(false);
     expect(q1.p2.points).toBe(0);
+    // Explanation text + image should be present
+    expect(q1.timeUp.explanation).toBe('Paris est la capitale depuis 508.');
+    expect(q1.timeUp.explanationImage).toBe('https://example.com/paris.jpg');
     p1Total += q1.p1.points;
     p2Total += q1.p2.points;
 
@@ -249,6 +261,9 @@ describe('Quiz E2E – full game flow', { timeout: 120_000 }, () => {
     expect(q2.p1.points).toBe(3);
     expect(q2.p2.correct).toBe(true);
     expect(q2.p2.points).toBe(3);
+    // Image only (no explanation text) should still be sent
+    expect(q2.timeUp.explanation).toBeNull();
+    expect(q2.timeUp.explanationImage).toBe('https://example.com/earth.png');
     p1Total += q2.p1.points;
     p2Total += q2.p2.points;
 
@@ -267,6 +282,9 @@ describe('Quiz E2E – full game flow', { timeout: 120_000 }, () => {
     expect(q3.p1.points).toBe(4); // 4 choices, all matching
     expect(q3.p2.correct).toBe(false);
     expect(q3.p2.points).toBe(3); // 3 out of 4 matching
+    // No explanation on this question
+    expect(q3.timeUp.explanation).toBeNull();
+    expect(q3.timeUp.explanationImage).toBeNull();
     p1Total += q3.p1.points;
     p2Total += q3.p2.points;
 
