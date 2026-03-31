@@ -42,6 +42,7 @@ let adminToken = null;
 let questionCount = 0;
 let currentQuestionData = null;
 let totalQuestions = 0;
+let currentPlayerCount = 0;
 
 // Screens
 const screens = {
@@ -1266,6 +1267,7 @@ socket.on('admin:reconnected', ({ pin, state, players, currentQuestionIndex, qui
 
 function updatePlayerList(players) {
   const count = players.length;
+  currentPlayerCount = count;
   document.getElementById('player-count').textContent = `${count} joueur${count > 1 ? 's' : ''}`;
   document.getElementById('room-players').innerHTML = players
     .map(
@@ -1365,7 +1367,7 @@ socket.on(
       `Question ${questionIndex + 1} / ${total}`;
     document.getElementById('admin-q-text').textContent = decodeHTML(text);
     document.getElementById('admin-timer').textContent = timeLimit;
-    document.getElementById('admin-answer-count').textContent = '0 réponses';
+    document.getElementById('admin-answer-count').textContent = `0 / ${currentPlayerCount} réponses`;
 
     // Progress bar
     const progressBar = document.getElementById('admin-progress-bar');
@@ -1452,6 +1454,7 @@ socket.on('game:timer-tick', ({ remaining }) => {
 });
 
 socket.on('game:answer-count', ({ answered, total }) => {
+  currentPlayerCount = total;
   document.getElementById('admin-answer-count').textContent = `${answered} / ${total} réponses`;
 });
 
