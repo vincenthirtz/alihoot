@@ -290,12 +290,9 @@ body.dark .ordering-item .ordering-num { color: #a78bfa; }
 
 /* Question options row */
 .q-options-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: center; }
-.time-select,
-.points-select { display: flex; align-items: center; gap: 10px; }
-.time-select label,
-.points-select label { font-size: 0.85rem; font-weight: 700; color: var(--card-label); }
-.time-select select,
-.points-select select {
+.time-select { display: flex; align-items: center; gap: 10px; }
+.time-select label { font-size: 0.85rem; font-weight: 700; color: var(--card-label); }
+.time-select select {
   padding: 6px 12px;
   font-weight: 600;
   border: 2px solid var(--card-border);
