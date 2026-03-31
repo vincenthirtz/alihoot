@@ -29,6 +29,13 @@ const fingerprint = (() => {
 
 let isTraining = false;
 
+// Decode HTML entities (&#039; → ', &amp; → &, etc.)
+const _decodeEl = document.createElement('textarea');
+function decodeHTML(str) {
+  _decodeEl.innerHTML = str;
+  return _decodeEl.value;
+}
+
 // YouTube URL parser
 function extractYouTubeId(url) {
   const match = url.match(
@@ -158,6 +165,8 @@ socket.on('connect', () => setConnectionStatus('connected'));
 socket.on('disconnect', () => {
   setConnectionStatus('disconnected');
   joinBtn.disabled = false;
+  const regBtn = document.getElementById('register-btn');
+  if (regBtn) regBtn.disabled = false;
 });
 socket.io.on('reconnect_attempt', () => setConnectionStatus('reconnecting'));
 socket.io.on('reconnect', () => {
@@ -330,6 +339,10 @@ registerBtn.addEventListener('click', () => {
     return;
   }
 
+  if (!socket.connected) {
+    registerError.textContent = 'Pas de connexion au serveur';
+    return;
+  }
   registerError.textContent = '';
   registerBtn.disabled = true;
 
@@ -577,7 +590,7 @@ socket.on(
         : '';
     document.getElementById('q-counter').innerHTML =
       `Question ${questionIndex + 1} / ${total}${multiplierBadge}`;
-    document.getElementById('q-text').textContent = text;
+    document.getElementById('q-text').textContent = decodeHTML(text);
     document.getElementById('timer-display').textContent = timeLimit;
 
     // Progress bar
@@ -589,8 +602,9 @@ socket.on(
 
     // Image
     const imgEl = document.getElementById('q-image');
-    if (image) {
-      imgEl.src = image;
+    const decodedImage = image ? decodeHTML(image) : null;
+    if (decodedImage) {
+      imgEl.src = decodedImage;
       imgEl.style.display = 'block';
     } else {
       imgEl.style.display = 'none';
@@ -598,12 +612,13 @@ socket.on(
 
     // Video
     const videoContainer = document.getElementById('q-video');
-    if (video) {
-      const ytId = extractYouTubeId(video);
+    const decodedVideo = video ? decodeHTML(video) : null;
+    if (decodedVideo) {
+      const ytId = extractYouTubeId(decodedVideo);
       if (ytId) {
         videoContainer.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${ytId}?rel=0&modestbranding=1" frameborder="0" allowfullscreen></iframe>`;
       } else {
-        videoContainer.innerHTML = `<video src="${video}" controls playsinline preload="metadata"></video>`;
+        videoContainer.innerHTML = `<video src="${decodedVideo}" controls playsinline preload="metadata"></video>`;
       }
       videoContainer.style.display = 'block';
     } else {
@@ -699,7 +714,7 @@ socket.on(
       grid.innerHTML = choices
         .map(
           (c, i) =>
-            `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}" aria-label="Réponse ${i + 1}: ${c}" aria-pressed="false">
+            `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}" aria-label="Réponse ${i + 1}: ${decodeHTML(c)}" aria-pressed="false">
         <span class="shape">${shapeIcons[i] || ''}</span><span class="text">${c}</span>
       </button>`,
         )
@@ -711,7 +726,7 @@ socket.on(
       grid.innerHTML = choices
         .map(
           (c, i) =>
-            `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}" aria-label="Réponse ${i + 1}: ${c}">
+            `<button class="answer-btn ${barColors[i] || 'btn-red'}" data-index="${i}" aria-label="Réponse ${i + 1}: ${decodeHTML(c)}">
         <span class="shape">${shapeIcons[i] || ''}</span><span class="text">${c}</span>
       </button>`,
         )

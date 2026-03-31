@@ -7,6 +7,13 @@ import html2canvas from 'html2canvas';
 
 const BACKEND_URL = import.meta.env.PROD ? 'https://alihoot.onrender.com' : '';
 const socket = io(BACKEND_URL || undefined);
+
+// Decode HTML entities (&#039; → ', &amp; → &, etc.)
+const _decodeEl = document.createElement('textarea');
+function decodeHTML(str) {
+  _decodeEl.innerHTML = str;
+  return _decodeEl.value;
+}
 // Expose socket for auth module
 window._socket = socket;
 
@@ -1384,7 +1391,7 @@ socket.on(
         : '';
     document.getElementById('admin-q-counter').innerHTML =
       `Question ${questionIndex + 1} / ${total}${multiplierBadge}`;
-    document.getElementById('admin-q-text').textContent = text;
+    document.getElementById('admin-q-text').textContent = decodeHTML(text);
     document.getElementById('admin-timer').textContent = timeLimit;
     document.getElementById('admin-answer-count').textContent = '0 réponses';
 
@@ -1397,8 +1404,9 @@ socket.on(
 
     // Image
     const imgEl = document.getElementById('admin-q-image');
-    if (image) {
-      imgEl.src = image;
+    const decodedImage = image ? decodeHTML(image) : null;
+    if (decodedImage) {
+      imgEl.src = decodedImage;
       imgEl.style.display = 'block';
     } else {
       imgEl.style.display = 'none';
@@ -1406,12 +1414,13 @@ socket.on(
 
     // Video
     const videoContainer = document.getElementById('admin-q-video');
-    if (video) {
-      const ytId = extractYouTubeId(video);
+    const decodedVideo = video ? decodeHTML(video) : null;
+    if (decodedVideo) {
+      const ytId = extractYouTubeId(decodedVideo);
       if (ytId) {
         videoContainer.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${ytId}?rel=0&modestbranding=1" frameborder="0" allowfullscreen></iframe>`;
       } else {
-        videoContainer.innerHTML = `<video src="${video}" controls playsinline preload="metadata"></video>`;
+        videoContainer.innerHTML = `<video src="${decodedVideo}" controls playsinline preload="metadata"></video>`;
       }
       videoContainer.style.display = 'block';
     } else {
@@ -1477,7 +1486,7 @@ socket.on('game:answer-count', ({ answered, total }) => {
 // ========== STATS ==========
 
 socket.on('game:answer-stats', (stats) => {
-  document.getElementById('stats-question').textContent = currentQuestionData.text;
+  document.getElementById('stats-question').textContent = decodeHTML(currentQuestionData.text);
   const freetextEl = document.getElementById('freetext-stats');
   const barsEl = document.getElementById('stats-bars');
 
