@@ -651,34 +651,38 @@ io.on('connection', (socket: RateLimitedSocket) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, async () => {
-  log.info({ port: PORT }, 'Alihoot! server started');
-  log.info({ url: `http://localhost:${PORT}` }, 'Players URL');
-  log.info({ url: `http://localhost:${PORT}/admin` }, 'Admin URL');
-  await db.initTables();
-  if (process.env.REDIS_URL) {
-    redis.getClient();
-    log.info('Redis connected');
-  }
+export { server, io };
 
-  // Keep-alive: self-ping every 14 min to prevent Render free tier from sleeping
-  if (process.env.RENDER_EXTERNAL_URL) {
-    const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/health`;
-    setInterval(
-      async () => {
-        try {
-          await fetch(keepAliveUrl);
-          log.debug('Keep-alive ping ok');
-        } catch (e) {
-          log.warn({ err: e }, 'Keep-alive ping failed');
-        }
-      },
-      TIMERS.KEEP_ALIVE_INTERVAL_MS,
-    );
-    log.info('Keep-alive enabled (every 14 min)');
-  }
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT || 3000;
+  server.listen(PORT, async () => {
+    log.info({ port: PORT }, 'Alihoot! server started');
+    log.info({ url: `http://localhost:${PORT}` }, 'Players URL');
+    log.info({ url: `http://localhost:${PORT}/admin` }, 'Admin URL');
+    await db.initTables();
+    if (process.env.REDIS_URL) {
+      redis.getClient();
+      log.info('Redis connected');
+    }
 
-  // Room garbage collector: clean up stale rooms every 10 min
-  store.startRoomGC();
-});
+    // Keep-alive: self-ping every 14 min to prevent Render free tier from sleeping
+    if (process.env.RENDER_EXTERNAL_URL) {
+      const keepAliveUrl = `${process.env.RENDER_EXTERNAL_URL}/health`;
+      setInterval(
+        async () => {
+          try {
+            await fetch(keepAliveUrl);
+            log.debug('Keep-alive ping ok');
+          } catch (e) {
+            log.warn({ err: e }, 'Keep-alive ping failed');
+          }
+        },
+        TIMERS.KEEP_ALIVE_INTERVAL_MS,
+      );
+      log.info('Keep-alive enabled (every 14 min)');
+    }
+
+    // Room garbage collector: clean up stale rooms every 10 min
+    store.startRoomGC();
+  });
+}
